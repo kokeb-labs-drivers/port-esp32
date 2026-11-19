@@ -1,0 +1,17 @@
+---
+# The handbook's rules for a library at level high (.kokeb/handbook.yml). Calls kokeb-labs/ci-tools
+# ru-handbook-check.
+name: Handbook
+
+on:
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  handbook:
+    name: Handbook check
+    uses: kokeb-labs/ci-tools/.github/workflows/ru-handbook-check.yml@dc7332736ae931501f30513c33d0c51e9c693a80 # v1
+    permissions:
+      contents: read

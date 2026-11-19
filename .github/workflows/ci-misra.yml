@@ -1,0 +1,28 @@
+---
+# MISRA C++:2023 and the KB-CPP20 profile on traced host and Cortex-M builds of the port (inc/ and src/), at level
+# high (kb-core ADR-0011): the CodeQL MISRA C++:2023 pack, the profile pack and the compliance matrix. The boundary
+# files (deviations/boundary-files.yml) carry the SDK records (deviations/deviations.yml); the logic has one record,
+# DEV-003 (port-wide claim tables and per-task records). The scan builds the port over the ESP-IDF fakes (kb_port_esp32_scan: both chip variants). Calls
+# kokeb-labs/ci-tools ru-misra.
+name: MISRA
+
+on:
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  misra:
+    name: MISRA C++:2023
+    uses: kokeb-labs/ci-tools/.github/workflows/ru-misra.yml@dc7332736ae931501f30513c33d0c51e9c693a80 # v1
+    permissions:
+      contents: read
+    with:
+      level: high
+      paths: "inc src"
+      cmake_args: "-DKB_PORT_ESP32_BUILD_TESTS=ON"
+      build_target: kb_port_esp32_scan
+      cross_build_target: kb_port_esp32_scan
+      repo_deviations: deviations/deviations.yml
+      open_source_prerelease: true

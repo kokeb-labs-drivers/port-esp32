@@ -1,0 +1,47 @@
+---
+# The app matrix of the ESP32 examples, read by the ESP-IDF build scripts (idf.py builds of one app). CI builds
+# port_selftest for every ESP32 target (ci-cmake-matrix.yml).
+version: "1.0"
+
+metadata:
+  project: "kb port ESP32 examples"
+  default_app: "port_selftest"
+  target: "esp32c6"
+  idf_versions: ["release/v5.5"]
+  build_types: [["Release"]]
+
+apps:
+  port_selftest:
+    description: "Every contract once on a bare board: clock, busy wait, log, GPIO, PWM, ADC, I2C, SPI, CAN, UART"
+    source_file: "port_selftest.cpp"
+    category: "smoke"
+    idf_versions: ["release/v5.5"]
+    build_types: ["Release"]
+    ci_enabled: true
+    featured: true
+    hardware_required: false
+    features:
+      - "No external chip needed"
+
+build_config:
+  build_types:
+    Debug:
+      description: "Debug build"
+      cmake_build_type: "Debug"
+      optimization: "-O0"
+      debug_level: "-g3"
+      defines: ["DEBUG"]
+    Release:
+      description: "Release build"
+      cmake_build_type: "Release"
+      optimization: "-Os"
+      debug_level: "-g"
+      defines: ["NDEBUG"]
+  build_directory_pattern: "build-app-{app_type}-type-{build_type}-target-{target}-idf-{idf_version}"
+  project_name_pattern: "kb_port_esp32_{app_type}"
+
+ci_config:
+  timeout_minutes: 30
+  fail_fast: false
+  exclude_combinations: []
+  special_apps: []

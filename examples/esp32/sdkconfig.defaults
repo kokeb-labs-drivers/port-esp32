@@ -1,0 +1,11 @@
+# kb port ESP32 examples, for every target (idf.py set-target <target>).
+CONFIG_ESP_MAIN_TASK_STACK_SIZE=8192
+# The port is built like its host tests: no exceptions, no RTTI.
+CONFIG_COMPILER_CXX_EXCEPTIONS=n
+CONFIG_COMPILER_CXX_RTTI=n
+CONFIG_COMPILER_OPTIMIZATION_SIZE=y
+CONFIG_LOG_DEFAULT_LEVEL_INFO=y
+# FreeRTOS at 1000 Hz, so millisecond waits are whole ticks.
+CONFIG_FREERTOS_HZ=1000
+# kb::rtos uses the static allocation API only.
+CONFIG_FREERTOS_SUPPORT_STATIC_ALLOCATION=y

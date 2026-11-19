@@ -1,0 +1,39 @@
+---
+# The ESP32 examples built in the ESP-IDF v5.5 container: port_selftest (the port and kb-core) for
+# every ESP32 target. Calls kokeb-labs/ci-tools ru-cmake-matrix.
+name: ESP32 examples
+
+on:
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  targets:
+    name: examples per target
+    uses: kokeb-labs/ci-tools/.github/workflows/ru-cmake-matrix.yml@dc7332736ae931501f30513c33d0c51e9c693a80 # v1
+    permissions:
+      contents: read
+    with:
+      # The ESP-IDF image, pinned by digest here so the build environment is recorded in this repository.
+      esp_idf_image: "espressif/idf:v5.5.6@sha256:bf72fe7a15c22849a9a94147301165a545fb8905d97c176cf748e3e4614cac84"
+      submodules: "false"
+      source_dir: examples/esp32
+      build_type: Release
+      max_parallel: "4"
+      matrix: >-
+        [{"name": "esp32", "toolchain": "esp-idf:esp32",
+          "cmake_args": "-DIDF_TARGET=esp32 -DAPP_TYPE=port_selftest -DAPP_SOURCE_FILE=port_selftest.cpp"},
+         {"name": "esp32s2", "toolchain": "esp-idf:esp32s2",
+          "cmake_args": "-DIDF_TARGET=esp32s2 -DAPP_TYPE=port_selftest -DAPP_SOURCE_FILE=port_selftest.cpp"},
+         {"name": "esp32s3", "toolchain": "esp-idf:esp32s3",
+          "cmake_args": "-DIDF_TARGET=esp32s3 -DAPP_TYPE=port_selftest -DAPP_SOURCE_FILE=port_selftest.cpp"},
+         {"name": "esp32c3", "toolchain": "esp-idf:esp32c3",
+          "cmake_args": "-DIDF_TARGET=esp32c3 -DAPP_TYPE=port_selftest -DAPP_SOURCE_FILE=port_selftest.cpp"},
+         {"name": "esp32c6", "toolchain": "esp-idf:esp32c6",
+          "cmake_args": "-DIDF_TARGET=esp32c6 -DAPP_TYPE=port_selftest -DAPP_SOURCE_FILE=port_selftest.cpp"},
+         {"name": "esp32h2", "toolchain": "esp-idf:esp32h2",
+          "cmake_args": "-DIDF_TARGET=esp32h2 -DAPP_TYPE=port_selftest -DAPP_SOURCE_FILE=port_selftest.cpp"},
+         {"name": "esp32p4", "toolchain": "esp-idf:esp32p4",
+          "cmake_args": "-DIDF_TARGET=esp32p4 -DAPP_TYPE=port_selftest -DAPP_SOURCE_FILE=port_selftest.cpp"}]

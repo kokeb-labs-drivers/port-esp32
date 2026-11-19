@@ -1,0 +1,149 @@
+# Pins of the example applications, with a default per target (any GPIO the chip routes works).
+# SPDX-License-Identifier: MIT
+menu "kb port examples: pins"
+
+    config EXAMPLE_I2C_SDA
+        int "I2C SDA"
+        range -1 56
+        default 21 if IDF_TARGET_ESP32
+        default 8 if IDF_TARGET_ESP32S2
+        default 8 if IDF_TARGET_ESP32S3
+        default 4 if IDF_TARGET_ESP32C3
+        default 6 if IDF_TARGET_ESP32C6
+        default 1 if IDF_TARGET_ESP32H2
+        default 7 if IDF_TARGET_ESP32P4
+        default -1
+
+    config EXAMPLE_I2C_SCL
+        int "I2C SCL"
+        range -1 56
+        default 22 if IDF_TARGET_ESP32
+        default 9 if IDF_TARGET_ESP32S2
+        default 9 if IDF_TARGET_ESP32S3
+        default 5 if IDF_TARGET_ESP32C3
+        default 7 if IDF_TARGET_ESP32C6
+        default 2 if IDF_TARGET_ESP32H2
+        default 8 if IDF_TARGET_ESP32P4
+        default -1
+
+    config EXAMPLE_SPI_MOSI
+        int "SPI MOSI"
+        range -1 56
+        default 23 if IDF_TARGET_ESP32
+        default 11 if IDF_TARGET_ESP32S2
+        default 11 if IDF_TARGET_ESP32S3
+        default 7 if IDF_TARGET_ESP32C3
+        default 19 if IDF_TARGET_ESP32C6
+        default 25 if IDF_TARGET_ESP32H2
+        default 30 if IDF_TARGET_ESP32P4
+        default -1
+
+    config EXAMPLE_SPI_MISO
+        int "SPI MISO"
+        range -1 56
+        default 19 if IDF_TARGET_ESP32
+        default 13 if IDF_TARGET_ESP32S2
+        default 13 if IDF_TARGET_ESP32S3
+        default 2 if IDF_TARGET_ESP32C3
+        default 20 if IDF_TARGET_ESP32C6
+        default 11 if IDF_TARGET_ESP32H2
+        default 31 if IDF_TARGET_ESP32P4
+        default -1
+
+    config EXAMPLE_SPI_SCLK
+        int "SPI SCLK"
+        range -1 56
+        default 18 if IDF_TARGET_ESP32
+        default 12 if IDF_TARGET_ESP32S2
+        default 12 if IDF_TARGET_ESP32S3
+        default 6 if IDF_TARGET_ESP32C3
+        default 21 if IDF_TARGET_ESP32C6
+        default 10 if IDF_TARGET_ESP32H2
+        default 32 if IDF_TARGET_ESP32P4
+        default -1
+
+    config EXAMPLE_SPI_CS
+        int "SPI chip select"
+        range -1 56
+        default 5 if IDF_TARGET_ESP32
+        default 10 if IDF_TARGET_ESP32S2
+        default 10 if IDF_TARGET_ESP32S3
+        default 10 if IDF_TARGET_ESP32C3
+        default 18 if IDF_TARGET_ESP32C6
+        default 12 if IDF_TARGET_ESP32H2
+        default 33 if IDF_TARGET_ESP32P4
+        default -1
+
+    config EXAMPLE_ADC_PIN
+        int "ADC input of the self test (an ADC1 pin)"
+        range -1 56
+        default 34 if IDF_TARGET_ESP32
+        default 1 if IDF_TARGET_ESP32S2
+        default 1 if IDF_TARGET_ESP32S3
+        default 0 if IDF_TARGET_ESP32C3
+        default 0 if IDF_TARGET_ESP32C6
+        default 1 if IDF_TARGET_ESP32H2
+        default 16 if IDF_TARGET_ESP32P4
+        default -1
+
+    config EXAMPLE_LED_PIN
+        int "PWM and GPIO output of the self test"
+        range -1 56
+        default 2 if IDF_TARGET_ESP32
+        default 15 if IDF_TARGET_ESP32S2
+        default 2 if IDF_TARGET_ESP32S3
+        default 8 if IDF_TARGET_ESP32C3
+        default 15 if IDF_TARGET_ESP32C6
+        default 0 if IDF_TARGET_ESP32H2
+        default 36 if IDF_TARGET_ESP32P4
+        default -1
+
+    config EXAMPLE_CAN_TX
+        int "TWAI TX to the transceiver (self test, no-ack mode)"
+        range -1 56
+        default 26 if IDF_TARGET_ESP32
+        default 6 if IDF_TARGET_ESP32S2
+        default 6 if IDF_TARGET_ESP32S3
+        default 18 if IDF_TARGET_ESP32C3
+        default 2 if IDF_TARGET_ESP32C6
+        default 22 if IDF_TARGET_ESP32H2
+        default 37 if IDF_TARGET_ESP32P4
+        default -1
+
+    config EXAMPLE_CAN_RX
+        int "TWAI RX from the transceiver"
+        range -1 56
+        default 27 if IDF_TARGET_ESP32
+        default 7 if IDF_TARGET_ESP32S2
+        default 7 if IDF_TARGET_ESP32S3
+        default 19 if IDF_TARGET_ESP32C3
+        default 3 if IDF_TARGET_ESP32C6
+        default 23 if IDF_TARGET_ESP32H2
+        default 38 if IDF_TARGET_ESP32P4
+        default -1
+
+    config EXAMPLE_UART_TX
+        int "UART TX of the self test (-1: no UART test)"
+        range -1 56
+        default 17 if IDF_TARGET_ESP32
+        default 17 if IDF_TARGET_ESP32S2
+        default 17 if IDF_TARGET_ESP32S3
+        default -1 if IDF_TARGET_ESP32C3
+        default -1 if IDF_TARGET_ESP32C6
+        default -1 if IDF_TARGET_ESP32H2
+        default -1 if IDF_TARGET_ESP32P4
+        default -1
+
+    config EXAMPLE_UART_RX
+        int "UART RX of the self test (wire it to TX for a loopback)"
+        range -1 56
+        default 16 if IDF_TARGET_ESP32
+        default 18 if IDF_TARGET_ESP32S2
+        default 18 if IDF_TARGET_ESP32S3
+        default -1 if IDF_TARGET_ESP32C3
+        default -1 if IDF_TARGET_ESP32C6
+        default -1 if IDF_TARGET_ESP32H2
+        default -1 if IDF_TARGET_ESP32P4
+        default -1
+
+endmenu

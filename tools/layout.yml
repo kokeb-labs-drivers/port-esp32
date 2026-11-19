@@ -1,0 +1,23 @@
+---
+# What tools/check_layout.py accepts besides the rule "src/<stem>.cpp for every inc/kb/port/esp32/<stem>.hpp, and
+# src/boundary/<component>.cpp for every SDK component". Every entry carries its reason; an entry that no longer
+# matches a file fails the check, so the lists cannot go stale.
+
+# Public headers without a source file of the same stem.
+header_only:
+  error: >-
+    constants and inline functions only; the esp_err_t values it names are checked against the SDK in
+    src/boundary/error.cpp
+  version: >-
+    constants only; the version is checked against CMakeLists.txt and CHANGELOG.md by the static_assert in
+    src/port.cpp (the translation unit of port.hpp)
+
+# Files of src/ whose stem is not a public header: private code shared by several headers' sources.
+internal:
+  sdk: the seam between the logic (src/*.cpp) and the boundary (src/boundary/*.cpp); one declaration per SDK operation
+  claims: the pin, controller and slot claim tables shared by the sources of gpio, i2c, uart, spi, adc, pwm and can
+  caller_record: the per-task outcome records shared by the sources of gpio, i2c, uart, spi, adc, pwm and can
+
+# Files of src/boundary/ whose stem is not a public header.
+boundary_extra:
+  no_can: the stand-in for can.cpp on chips without a TWAI controller (CMakeLists.txt picks one of the two)

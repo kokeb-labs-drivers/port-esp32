@@ -1,0 +1,29 @@
+---
+# GCC and Clang builds and the host tests (the port over the ESP-IDF fakes), then clang-tidy and cppcheck over the
+# port's own code. Calls kokeb-labs/ci-tools ru-host-ci.
+name: Host
+
+on:
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  host:
+    name: Host build, tests and analysis
+    uses: kokeb-labs/ci-tools/.github/workflows/ru-host-ci.yml@dc7332736ae931501f30513c33d0c51e9c693a80 # v1
+    permissions:
+      contents: read
+    with:
+      cmake_args: "-DKB_PORT_ESP32_BUILD_TESTS=ON"
+      tidy_paths: "^(inc|src)/"
+      # clang-tidy runs in ci-cpp-lint.yml (clang-tidy 20, fails on findings). ru-host-ci installs clang-tidy 18,
+      # which cannot read the org configuration (ExcludeHeaderFilterRegex needs 19 or newer): it stopped with a
+      # configuration error on every file and still reported 0 findings, so its result was no evidence. Re-enable
+      # once ru-host-ci runs clang-tidy 20 and fails on a non-zero exit.
+      run_clang_tidy: false
+      clang_tidy_config: "_config/.clang-tidy"
+      # The kb-core copy is checked by kb-core's CI; test fakes and compile-fail tests are test code.
+      exclude_paths: "(^|/)(third_party|examples|tests)/"
+      fail_on_findings: true

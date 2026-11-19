@@ -1,0 +1,40 @@
+---
+# The only files of the ESP32 port that may include an ESP-IDF header: the directory src/boundary/, one file per SDK
+# component, named after it (kb-core ADR-0001, ADR-0007, ADR-0011; tools/check_layout.py). The
+# layering check (ci-layering.yml, rules tools/layering/rules.yml) fails on an SDK include anywhere else and on a
+# listed file that is missing. The MISRA records in deviations.yml name files from this list, except DEV-003 (the
+# port-wide claim tables and per-task records of the platform-free logic).
+boundary_files:
+  - path: src/boundary/adc.cpp
+    sdk: esp-idf
+    status: present
+  - path: src/boundary/can.cpp
+    sdk: esp-idf
+    status: present
+  - path: src/boundary/error.cpp
+    sdk: esp-idf
+    status: present
+  - path: src/boundary/gpio.cpp
+    sdk: esp-idf
+    status: present
+  - path: src/boundary/i2c.cpp
+    sdk: esp-idf
+    status: present
+  - path: src/boundary/log.cpp
+    sdk: esp-idf
+    status: present
+  - path: src/boundary/no_can.cpp
+    sdk: esp-idf
+    status: present
+  - path: src/boundary/pwm.cpp
+    sdk: esp-idf
+    status: present
+  - path: src/boundary/spi.cpp
+    sdk: esp-idf
+    status: present
+  - path: src/boundary/time.cpp
+    sdk: esp-idf
+    status: present
+  - path: src/boundary/uart.cpp
+    sdk: esp-idf
+    status: present

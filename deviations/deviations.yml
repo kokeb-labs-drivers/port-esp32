@@ -1,0 +1,119 @@
+---
+# MISRA C++:2023 deviation records of the ESP32 port (format: kb-core deviations/README.md), read by the MISRA
+# workflow (ci-misra.yml, input repo_deviations). DEV-001, DEV-002 and DEV-004 name only files of
+# boundary-files.yml next to this file; DEV-003 is the one record of the platform-free logic: the port-wide claim
+# tables and the per-task outcome records, which are shared by every object of the port by design. A marker in
+# code, `// codeql::misra_deviation_next_line(<id>)`, cites the id on the line before each finding it covers.
+deviations:
+  - id: DEV-001
+    check: misra/Rule 6.7.1
+    where: >-
+      src/boundary/adc.cpp
+      src/boundary/can.cpp
+      src/boundary/i2c.cpp
+      src/boundary/spi.cpp
+      src/boundary/uart.cpp
+    reason: >-
+      ESP-IDF returns its driver objects as handles (i2c_master_bus_handle_t, spi_device_handle_t, the UART event
+      QueueHandle_t, adc_oneshot_unit_handle_t, adc_cali_handle_t, twai_handle_t) that must outlive every call of
+      the port object that created them, and no SDK type may appear in the port's public headers. The boundary
+      files keep them in one table per peripheral, indexed by the hardware number or a slot; a function-local
+      static is the form with a defined initialisation point (constant initialisation, no static-order
+      dependency). The SPI transaction descriptors (one per device slot, which must outlive a polling_start whose
+      polling_end timed out), the SPI DMA buffer pointers, the UART queue lengths and the SPI zero buffer are tables of
+      the same kind.
+    mitigation: >-
+      Each table is reached only through one accessor in an anonymous namespace of its boundary file
+      (src/boundary/<component>.cpp) and holds SDK handles (and, for SPI, the transaction descriptors and the DMA
+      buffer pointer) only. The index is a number the platform-free logic claimed before the SDK is called (DEV-003:
+      lock-free claims of the I2C port, UART port, SPI host, TWAI controller, SPI device slot and ADC channel slot),
+      so a second object on the same hardware is refused (kb::Status::Busy) before it reaches a table, and no two
+      objects ever write one entry. An entry is written by its owner's EnsureReady() after the claim succeeded (only
+      the claimant reaches it) and cleared by its Release() under the owner's lock (I2C, UART, SPI bus), the ADC
+      unit's lock, or, for CAN, after the controller stopped accepting calls; the UART queue length is set only after
+      the driver install succeeded. The host tests exercise every accessor over the ESP-IDF fakes, including a refused
+      second owner and the release paths.
+    approved_by: maintainer
+    date: 2026-11-14
+    review_by: 2027-11-14
+  - id: DEV-002
+    check: misra/Rule 8.2.11
+    where: >-
+      src/boundary/log.cpp
+    reason: >-
+      ESP-IDF's log entry point, esp_log_write, is a C variadic function, and the LogSink contract is implemented
+      over esp_log so lines keep ESP-IDF's levels, filtering and output routing. clang-tidy's
+      cppcoreguidelines-pro-type-vararg reports every variadic call (a superset of Rule 8.2.11, which asks only that
+      each argument passed through the ellipsis have the type its conversion expects).
+    mitigation: >-
+      One call, in one boundary function (LogWrite). The format string is a literal fixed in the source, and each
+      argument has exactly the type its conversion names: const char* for %s, unsigned long (an explicit cast) for
+      %lu, int (an explicit cast of the length, which LogSink cuts at kLogMaxLine) for the precision of %.*s, and a
+      pointer to that many characters. No user text is ever used as a format. The host tests check the line the fake
+      esp_log_write receives.
+    approved_by: maintainer
+    date: 2026-11-14
+    review_by: 2027-11-14
+  - id: DEV-003
+    check: misra/Rule 6.7.1
+    where: >-
+      src/adc.cpp
+      src/caller_record.cpp
+      src/claims.cpp
+      src/gpio.cpp
+      src/pwm.cpp
+      src/spi.cpp
+    reason: >-
+      A few facts belong to the chip, not to one port object, and every object must see the same copy: which GPIO
+      pins, SPI device slots and ADC channel slots are taken (one owner per pin across every peripheral); the
+      frequency, resolution and users of each LEDC timer (shared by its channels); the users and lock of each ADC
+      unit; whether the port installed the GPIO ISR service; and, per task, the outcome of that task's last call
+      on each shared object (thread storage, so a task never reads another task's failure). kb-core types have no
+      singletons and no static constructors, so each fact is a function-local static (thread_local for the
+      per-task records) with constant initialisation.
+    mitigation: >-
+      Each table is reached through one accessor in an anonymous namespace (claims.hpp for the claim tables).
+      Every change is atomic or under a bounded guard: claims are single compare-and-swap bit operations, the LEDC
+      timer record is changed only while its busy flag is held (a few 1 ms tries, then Busy), the ADC unit count
+      only under the unit's kb::rtos::Mutex, which is created once through an atomic state; the per-task records
+      are written and read only by their own task. None of the tables needs a critical section or an RTOS call to
+      read. The host tests cover the claims across peripherals, the shared timer refusal, the ADC unit
+      release under its lock and two threads reading their own records from one controller.
+    approved_by: maintainer
+    date: 2026-11-14
+    review_by: 2027-11-14
+  - id: DEV-004
+    check: misra/Rule 6.9.2
+    where: >-
+      src/boundary/adc.cpp
+      src/boundary/spi.cpp
+    reason: >-
+      ESP-IDF returns some results through `int*` out-parameters (adc_oneshot_read, adc_cali_raw_to_voltage,
+      spi_device_get_actual_freq). The variable passed must be an `int`: on the ESP32 toolchains int32_t is `long`,
+      so an int32_t object cannot be passed where the SDK takes `int*`.
+    mitigation: >-
+      Three local variables, one per call, each converted at once to a fixed-width type (int32_t or uint32_t) of
+      the same width, so no `int` leaves the boundary function. Plain `int` returns and parameters of the SDK
+      (uart_tx_chars, uart_read_bytes, the I2C millisecond timeouts, the UART interrupt flags) are held in int32_t
+      and converted with static_cast at the call. The host tests check each converted value over the fakes.
+    approved_by: maintainer
+    date: 2026-11-14
+    review_by: 2027-11-14
+  - id: DEV-005
+    check: misra/Rule 8.2.6
+    where: >-
+      src/boundary/spi.cpp
+    reason: >-
+      The SPI DMA buffer of a host comes from heap_caps_aligned_alloc, which returns `void*`; ESP-IDF has no typed
+      allocator for DMA-capable, aligned internal memory. The block is converted once to `uint8_t*` to form the
+      two spans (transmit and receive halves) of the buffer.
+    mitigation: >-
+      One conversion, in SpiDmaBufferOpen, of a block of 2 x half bytes that the call itself allocated with that
+      size and alignment; the spans cover exactly the block. The block is allocated once per host in
+      SpiBus::EnsureReady() and freed only after spi_bus_free succeeded (no transaction can still use it). The host
+      tests check the size, the alignment, a refused allocation, that the block outlives a refused
+      spi_bus_free, and that the port allocates nothing per transfer; on chips with a cache in front of internal RAM
+      ESP-IDF itself may still bounce a receive not in whole cache lines (docs/peripherals/spi.md).
+    approved_by: maintainer
+    date: 2026-11-14
+    review_by: 2027-11-14

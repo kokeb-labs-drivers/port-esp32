@@ -1,0 +1,21 @@
+---
+# clang-format 20 and clang-tidy 20 with the org configuration in _config/. Calls kokeb-labs/ci-tools ru-cpp-lint.
+name: C++ lint
+
+on:
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    name: clang-format and clang-tidy
+    uses: kokeb-labs/ci-tools/.github/workflows/ru-cpp-lint.yml@dc7332736ae931501f30513c33d0c51e9c693a80 # v1
+    permissions:
+      contents: read
+    with:
+      clang_version: "20"
+      cmake_args: "-DKB_PORT_ESP32_BUILD_TESTS=ON"
+      # The kb-core copy has its own CI; the examples build in ESP-IDF; tests are test code.
+      ignore: "build|.git|third_party|examples|tests"

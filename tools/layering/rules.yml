@@ -1,0 +1,45 @@
+---
+# Zones of the ESP32 port and what each may include (ci-tools ru-layering, tools/layering/layering.py). Paths are
+# globs from the repository root. "sdk" is a header named in sdk_headers, allowed only in a file listed in
+# deviations/boundary-files.yml (kb-core ADR-0007, ADR-0011).
+zones:
+  # The port: public headers and sources. It sees kb-core only through the public kb/<part>/ headers.
+  port:
+    paths: ["inc/**", "src/**"]
+    may_include: [port, kb_utils, kb_rtos, kb_interfaces, std_subset, sdk]
+  # Host tests: the port, kb-core's host port and harness, and the ESP-IDF fakes (named like the SDK headers).
+  tests:
+    paths: ["tests/**"]
+    may_include: [port, kb_utils, kb_rtos, kb_interfaces, kb_host, kb_harness, sdk_fakes, tests, std_any, sdk_any]
+  # ESP-IDF applications: they may call ESP-IDF in their own main/ (app_main, FreeRTOS delays).
+  examples:
+    paths: ["examples/**"]
+    may_include: [port, kb_utils, kb_rtos, kb_interfaces, examples, std_any, sdk_any]
+  # The pinned kb-core copy: checked by its own CI.
+  kb_core:
+    paths: ["third_party/kb-core/**"]
+    may_include: [kb_core, std_any, sdk_any]
+external_zones: [kb_core]
+public_headers:
+  kb_utils: "third_party/kb-core/components/lib/utils/inc/kb/utils/**"
+  kb_rtos: "third_party/kb-core/components/lib/rtos/inc/kb/rtos/**"
+  kb_interfaces: "third_party/kb-core/components/lib/interfaces/inc/kb/interfaces/**"
+  kb_host: "third_party/kb-core/components/lib/interfaces/host/inc/kb/interfaces/host/**"
+  kb_harness: "third_party/kb-core/tests/harness/**"
+# The ESP-IDF fakes (tests/fakes/esp-idf) carry the SDK's header names; the check excludes that folder (ci-layering.yml)
+# so an SDK name always means the SDK, and the tests reach the fakes' own control headers through this group.
+header_groups:
+  sdk_fakes: ["fake_esp_idf.hpp", "esp_idf_fake.h"]
+boundary_files: deviations/boundary-files.yml
+sdk_headers:
+  - "esp_*"
+  - "esp_adc/*"
+  - "driver/*"
+  - "hal/*"
+  - "soc/*"
+  - "freertos/*"
+  - "FreeRTOS.h"
+  - "sdkconfig.h"
+forbidden_keywords: [virtual]
+platform_macros: [ESP_PLATFORM, "CONFIG_*", "SOC_*", "ADC_CALI_*", "IDF_*", "ESP_IDF_*"]
+denylist_file: null
