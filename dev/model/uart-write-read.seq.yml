@@ -1,0 +1,40 @@
+---
+kind: seq
+id: uart-write-read
+title: A UART request and reply
+kicker: port-esp32
+subtitle: Write fills the hardware FIFO; Read takes the first byte with a timeout, then what is already buffered.
+alt: >-
+  Sequence of a UART Write followed by a Read on the ESP32 port, in which the port fills the transmit FIFO itself,
+  the reply lands in ESP-IDF's receive ring buffer, and Read waits only for its first byte.
+reads: >-
+  The driver's Write call reaches the Uart, which takes its writer lock and hands the bytes to ESP-IDF's uart driver
+  with uart_tx_chars, again after eight character times until every byte is in the FIFO, and the bytes go out on TX
+  to the Device. The Device's reply arrives on RX into the uart driver's ring buffer. The driver's Read call takes
+  the reader lock, reports any pending framing, parity or overflow event first, waits up to its timeout for one
+  byte and then takes the bytes already buffered without waiting; the count returns to the driver.
+profile: phone
+print: portrait
+sources:
+  - src/uart.cpp
+  - src/boundary/uart.cpp
+  - inc/kb/port/esp32/uart.hpp
+participants:
+  - {id: ctl, label: Uart, tone: amber}
+  - {id: idf, label: uart driver, tone: slate}
+  - {id: dev, label: Device, tone: green}
+steps:
+  - {note: "the driver calls Write(tx)", over: [ctl, idf], tone: blue}
+  - {from: ctl, to: ctl, label: writer lock}
+  - {from: ctl, to: idf, label: uart_tx_chars}
+  - {from: idf, to: dev, label: TX bytes}
+  - {note: "FIFO full: refill after 8 characters", over: [ctl, idf]}
+  - {from: dev, to: idf, label: RX reply, dashed: true}
+  - {note: "the driver calls Read(rx, timeout)", over: [ctl, idf], tone: blue}
+  - {from: ctl, to: ctl, label: reader lock}
+  - {from: ctl, to: idf, label: pending error events}
+  - {from: ctl, to: idf, label: "read 1 byte, timeout"}
+  - {from: idf, to: ctl, label: first byte, return: true}
+  - {from: ctl, to: idf, label: "read buffered, no wait"}
+  - {from: idf, to: ctl, label: the rest, return: true}
+  - {note: byte count back to the driver, over: [ctl, idf], tone: blue}

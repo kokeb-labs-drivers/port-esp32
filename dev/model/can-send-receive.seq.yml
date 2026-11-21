@@ -1,0 +1,36 @@
+---
+kind: seq
+id: can-send-receive
+title: Sending and receiving a CAN frame
+kicker: port-esp32
+subtitle: Send queues the frame in ESP-IDF's TWAI driver; Receive takes one from its receive queue.
+alt: >-
+  Sequence of a CAN Send and a Receive on the ESP32 port, in which Send returns once the TWAI driver has queued the
+  frame, the controller sends it on the bus by interrupt, and Receive takes a frame another node sent.
+reads: >-
+  The driver's Send call reaches the CanController, which hands the frame to ESP-IDF's TWAI driver with
+  twai_transmit_v2, waiting up to the call's timeout for a transmit queue slot; Ok means queued. The TWAI controller
+  then sends the frame to the Other node through the transceiver, by interrupt, and the Other node acknowledges it.
+  A frame the Other node sends lands in the TWAI driver's receive queue, and the driver's Receive call takes it with
+  twai_receive_v2 within its timeout. A bus-off controller answers BusError until Recover brings it back.
+profile: phone
+print: portrait
+sources:
+  - src/can.cpp
+  - src/boundary/can.cpp
+  - inc/kb/port/esp32/can.hpp
+participants:
+  - {id: ctl, label: CanController, tone: amber}
+  - {id: idf, label: TWAI driver, tone: slate}
+  - {id: bus, label: Other node, tone: green}
+steps:
+  - {note: "the driver calls Send(frame, t)", over: [ctl, idf], tone: blue}
+  - {from: ctl, to: idf, label: twai_transmit_v2}
+  - {from: idf, to: ctl, label: "queued: Ok", return: true}
+  - {from: idf, to: bus, label: frame on the bus}
+  - {from: bus, to: idf, label: ACK slot, return: true}
+  - {from: bus, to: idf, label: a frame for us, dashed: true}
+  - {note: "the driver calls Receive(frame, t)", over: [ctl, idf], tone: blue}
+  - {from: ctl, to: idf, label: twai_receive_v2}
+  - {from: idf, to: ctl, label: the frame, return: true}
+  - {note: "bus-off: BusError until Recover()", over: [ctl, idf]}

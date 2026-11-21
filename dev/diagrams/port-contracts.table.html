@@ -1,0 +1,19 @@
+<details>
+<summary>Table form of this figure</summary>
+<table>
+<caption>Contracts on the ESP32 port</caption>
+<thead><tr><th scope="col"></th><th scope="col">Base contract</th><th scope="col">Extra contracts</th></tr></thead>
+<tbody>
+<tr><th scope="row">I2C</th><td>adapted (I2cBus, i2c_master)</td><td>planned (I2cTransactional)</td></tr>
+<tr><th scope="row">SPI</th><td>native (SpiDevice, spi_master)</td><td>adapted (SpiClockControl)</td></tr>
+<tr><th scope="row">UART</th><td>native (UartPort, uart)</td><td>native (BaudControl, TxDrain)</td></tr>
+<tr><th scope="row">CAN</th><td>native (CanBus, TWAI)</td><td>n/a (no CAN FD on chip)</td></tr>
+<tr><th scope="row">ADC</th><td>native (AdcChannel, adc_oneshot)</td><td>n/a (none defined)</td></tr>
+<tr><th scope="row">PWM</th><td>native (PwmOutput, LEDC)</td><td>n/a (none defined)</td></tr>
+<tr><th scope="row">GPIO</th><td>native (GpioOutput, GpioInput)</td><td>native (GpioInterrupt)</td></tr>
+<tr><th scope="row">Clock and delay</th><td>native (MonotonicClock, esp_timer)</td><td>native (BusyWait, ROM delay)</td></tr>
+<tr><th scope="row">Log</th><td>native (LogSink, esp_log)</td><td>n/a (none defined)</td></tr>
+<tr><th scope="row">Pulse output</th><td>planned (PulseTx (RMT))</td><td>n/a (none defined)</td></tr>
+</tbody>
+</table>
+</details>
