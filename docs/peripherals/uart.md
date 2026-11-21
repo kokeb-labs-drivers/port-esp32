@@ -15,6 +15,16 @@
 | `WaitTxDone(timeout)` | `uart_wait_tx_done` under the writer lock |
 | `Release()` | `uart_driver_delete` with both locks held (`Busy` when either is not had) |
 
+<!-- figure: uart-write-read -->
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="../diagrams/uart-write-read.dark.svg">
+  <img src="../diagrams/uart-write-read.svg"
+    alt="Sequence of a UART Write followed by a Read on the ESP32 port, in which the port fills the transmit
+    FIFO itself, the reply lands in ESP-IDF's receive ring buffer, and Read waits only for its first
+    byte.">
+</picture>
+<!-- /figure -->
+
 ## Pins and clock
 
 | Item | Note |

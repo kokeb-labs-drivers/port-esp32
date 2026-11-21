@@ -18,6 +18,16 @@ handle for asynchronous transfers: ESP-IDF refuses a mix of synchronous and asyn
 | `RecoverBus()` | `i2c_master_bus_reset`: nine SCL clocks and a STOP, the controller reset; then SDA and SCL are read back |
 | `Release()` | Under the controller lock (`Busy` when not had): `i2c_master_bus_rm_device`, `i2c_del_master_bus` |
 
+<!-- figure: i2c-write-read -->
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="../diagrams/i2c-write-read.dark.svg">
+  <img src="../diagrams/i2c-write-read.svg"
+    alt="Sequence of an I2C WriteRead on the ESP32 port, in which the controller takes its lock, ESP-IDF
+    sends the register address and reads the reply after a repeated START, and the controller turns the
+    result into a kb::Status.">
+</picture>
+<!-- /figure -->
+
 The controller owns the port and its pins: a second `I2cController` on the same port, or any port object on SDA
 or SCL, gets `Busy` from `EnsureReady()`.
 

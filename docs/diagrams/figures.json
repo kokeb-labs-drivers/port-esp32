@@ -1,0 +1,109 @@
+{
+  "can-send-receive": {
+    "title": "Sending and receiving a CAN frame",
+    "alt": "Sequence of a CAN Send and a Receive on the ESP32 port, in which Send returns once the TWAI driver has queued the frame, the controller sends it on the bus by interrupt, and Receive takes a frame another node sent.",
+    "description": "The driver's Send call reaches the CanController, which hands the frame to ESP-IDF's TWAI driver with twai_transmit_v2, waiting up to the call's timeout for a transmit queue slot; Ok means queued. The TWAI controller then sends the frame to the Other node through the transceiver, by interrupt, and the Other node acknowledges it. A frame the Other node sends lands in the TWAI driver's receive queue, and the driver's Receive call takes it with twai_receive_v2 within its timeout. A bus-off controller answers BusError until Recover brings it back.",
+    "profile": "phone",
+    "width": 575,
+    "source": "docs/model/can-send-receive.seq.yml",
+    "sources": [
+      "docs/model/can-send-receive.seq.yml",
+      "inc/kb/port/esp32/can.hpp",
+      "src/boundary/can.cpp",
+      "src/can.cpp"
+    ],
+    "kind": "seq",
+    "palette": 2,
+    "print": "portrait",
+    "adaptive": true,
+    "twin": false,
+    "font": ""
+  },
+  "i2c-write-read": {
+    "title": "One I2C register read",
+    "alt": "Sequence of an I2C WriteRead on the ESP32 port, in which the controller takes its lock, ESP-IDF sends the register address and reads the reply after a repeated START, and the controller turns the result into a kb::Status.",
+    "description": "The driver's WriteRead call reaches the I2cController, which takes its lock within the call's timeout and, for a new address, moves its one device handle to it without bus traffic. ESP-IDF's i2c_master sends START, the address with the write bit and the register bytes to the Device, then a repeated START and the address with the read bit, reads the reply and ends with STOP. The I2cController classifies the esp_err_t by the time the transfer took, runs the bus recovery when SDA or SCL stays low, and returns a kb::Status to the driver.",
+    "profile": "phone",
+    "width": 563,
+    "source": "docs/model/i2c-write-read.seq.yml",
+    "sources": [
+      "docs/model/i2c-write-read.seq.yml",
+      "inc/kb/port/esp32/i2c.hpp",
+      "src/boundary/i2c.cpp",
+      "src/i2c.cpp"
+    ],
+    "kind": "seq",
+    "palette": 2,
+    "print": "portrait",
+    "adaptive": true,
+    "twin": false,
+    "font": ""
+  },
+  "port-contracts": {
+    "title": "Contracts on the ESP32 port",
+    "alt": "Matrix of the kb-core contracts the ESP32 port implements for I2C, SPI, UART, CAN, ADC, PWM, GPIO, clock and log, each marked native, adapted, planned or not available.",
+    "description": "Rows are the peripherals I2C, SPI, UART, CAN, ADC, PWM, GPIO, Clock and delay, Log and Pulse output; the columns are the base contract of the peripheral and its extra contracts. Native means the contract maps onto the ESP-IDF driver named in the cell; adapted means the port adds its own logic to meet the contract, such as telling a NACK from a timeout by the elapsed time or adding the SPI device again for a new clock. Planned marks a contract kb-core has not defined yet, and n/a one that the chip or kb-core does not have.",
+    "profile": "phone",
+    "width": 631,
+    "source": "docs/model/port-contracts.matrix.yml",
+    "sources": [
+      "docs/model/port-contracts.matrix.yml",
+      "inc/kb/port/esp32/can.hpp",
+      "inc/kb/port/esp32/gpio.hpp",
+      "inc/kb/port/esp32/i2c.hpp",
+      "inc/kb/port/esp32/log.hpp",
+      "inc/kb/port/esp32/port.hpp",
+      "inc/kb/port/esp32/spi.hpp",
+      "inc/kb/port/esp32/time.hpp",
+      "inc/kb/port/esp32/uart.hpp",
+      "src/i2c.cpp",
+      "src/spi.cpp"
+    ],
+    "kind": "matrix",
+    "palette": 2,
+    "print": "portrait",
+    "adaptive": true,
+    "twin": true,
+    "font": ""
+  },
+  "spi-transfer": {
+    "title": "One SPI frame",
+    "alt": "Sequence of an SPI Transfer on the ESP32 port, in which the device takes the bus lock, ESP-IDF clocks the whole frame as one polling transaction with chip select low, and the port waits for its end with a bound sized to the frame.",
+    "description": "The driver's Transfer call reaches the SpiDevice, which takes the lock of its SPI host within its timeout; with DMA the frame is first copied into the host's own DMA buffer. ESP-IDF's spi_master starts one polling transaction: it drives chip select low, clocks every byte to the Device and reads its reply, then raises chip select. The SpiDevice waits for the end of the transaction for the frame's wire time plus the timeout, and once more; a transaction that never ends marks the host failed. The result returns to the driver as a kb::Status.",
+    "profile": "phone",
+    "width": 552,
+    "source": "docs/model/spi-transfer.seq.yml",
+    "sources": [
+      "docs/model/spi-transfer.seq.yml",
+      "inc/kb/port/esp32/spi.hpp",
+      "src/boundary/spi.cpp",
+      "src/spi.cpp"
+    ],
+    "kind": "seq",
+    "palette": 2,
+    "print": "portrait",
+    "adaptive": true,
+    "twin": false,
+    "font": ""
+  },
+  "uart-write-read": {
+    "title": "A UART request and reply",
+    "alt": "Sequence of a UART Write followed by a Read on the ESP32 port, in which the port fills the transmit FIFO itself, the reply lands in ESP-IDF's receive ring buffer, and Read waits only for its first byte.",
+    "description": "The driver's Write call reaches the Uart, which takes its writer lock and hands the bytes to ESP-IDF's uart driver with uart_tx_chars, again after eight character times until every byte is in the FIFO, and the bytes go out on TX to the Device. The Device's reply arrives on RX into the uart driver's ring buffer. The driver's Read call takes the reader lock, reports any pending framing, parity or overflow event first, waits up to its timeout for one byte and then takes the bytes already buffered without waiting; the count returns to the driver.",
+    "profile": "phone",
+    "width": 565,
+    "source": "docs/model/uart-write-read.seq.yml",
+    "sources": [
+      "docs/model/uart-write-read.seq.yml",
+      "inc/kb/port/esp32/uart.hpp",
+      "src/boundary/uart.cpp",
+      "src/uart.cpp"
+    ],
+    "kind": "seq",
+    "palette": 2,
+    "print": "portrait",
+    "adaptive": true,
+    "twin": false,
+    "font": ""
+  }
+}

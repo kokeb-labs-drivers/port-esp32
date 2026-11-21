@@ -1,0 +1,50 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="575" height="720" viewBox="0 0 575 720" role="img" aria-labelledby="can-send-receive-title can-send-receive-desc" font-family="Inter, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif">
+<title id="can-send-receive-title">Sending and receiving a CAN frame</title>
+<desc id="can-send-receive-desc">Sequence of a CAN Send and a Receive on the ESP32 port, in which Send returns once the TWAI driver has queued the frame, the controller sends it on the bus by interrupt, and Receive takes a frame another node sent.</desc>
+<defs><marker id="can-send-receive-arrow-rail" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#6C7889"/></marker></defs>
+<rect x="0.5" y="0.5" width="574" height="719" rx="16" fill="#0E131A" stroke="#283241"/>
+<text x="32" y="44.4" font-size="13" font-weight="700" letter-spacing="1.2" fill="#F8D27A">PORT-ESP32</text>
+<text x="32" y="76.2" font-size="24" font-weight="700" fill="#E8EDF3">Sending and receiving a CAN frame</text>
+<text x="32" y="102.7" font-size="15" fill="#9AA6B5">Send queues the frame in ESP-IDF's TWAI driver; Receive takes</text>
+<text x="32" y="124.5" font-size="15" fill="#9AA6B5">one from its receive queue.</text>
+<rect x="32" y="140.4" width="511" height="1" fill="#252F3C"/>
+<path d="M122.4 214.4 L122.4 704.5" fill="none" stroke="#6C7889" stroke-width="1.2" stroke-dasharray="5 5"/>
+<path d="M295.1 214.4 L295.1 704.5" fill="none" stroke="#6C7889" stroke-width="1.2" stroke-dasharray="5 5"/>
+<path d="M465.1 214.4 L465.1 704.5" fill="none" stroke="#6C7889" stroke-width="1.2" stroke-dasharray="5 5"/>
+<path d="M126.4 302.4 L291.1 302.4" fill="none" stroke="#6C7889" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#can-send-receive-arrow-rail)"/>
+<path d="M291.1 346.4 L126.4 346.4" fill="none" stroke="#6C7889" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="7 5" marker-end="url(#can-send-receive-arrow-rail)"/>
+<path d="M299.1 390.4 L461.1 390.4" fill="none" stroke="#6C7889" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#can-send-receive-arrow-rail)"/>
+<path d="M461.1 434.4 L299.1 434.4" fill="none" stroke="#6C7889" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="7 5" marker-end="url(#can-send-receive-arrow-rail)"/>
+<path d="M461.1 478.4 L299.1 478.4" fill="none" stroke="#6C7889" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="7 5" marker-end="url(#can-send-receive-arrow-rail)"/>
+<path d="M126.4 574.5 L291.1 574.5" fill="none" stroke="#6C7889" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#can-send-receive-arrow-rail)"/>
+<path d="M291.1 618.5 L126.4 618.5" fill="none" stroke="#6C7889" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="7 5" marker-end="url(#can-send-receive-arrow-rail)"/>
+<rect x="39.7" y="158.4" width="165.4" height="52" rx="10" fill="#2C2310" stroke="#FBBF24" stroke-width="1.4"/>
+<rect x="39.7" y="166.4" width="4" height="36" rx="2" fill="#FBBF24"/>
+<rect x="221.1" y="158.4" width="148" height="52" rx="10" fill="#1B232E" stroke="#94A3B8" stroke-width="1.4"/>
+<rect x="221.1" y="166.4" width="4" height="36" rx="2" fill="#94A3B8"/>
+<rect x="394.9" y="158.4" width="140.4" height="52" rx="10" fill="#11281A" stroke="#4ADE80" stroke-width="1.4"/>
+<rect x="394.9" y="166.4" width="4" height="36" rx="2" fill="#4ADE80"/>
+<rect x="52.4" y="234.4" width="312.7" height="43" rx="10" fill="#13233A" stroke="#2B4C78" stroke-width="1"/>
+<rect x="52.4" y="506.4" width="312.7" height="43" rx="10" fill="#13233A" stroke="#2B4C78" stroke-width="1"/>
+<rect x="52.4" y="646.5" width="312.7" height="43" rx="10" fill="#2C2310" stroke="#6A5220" stroke-width="1"/>
+<text x="125.4" y="189.5" font-size="17" font-weight="700" text-anchor="middle" fill="#FDE68A">CanController</text>
+<text x="298.1" y="189.5" font-size="17" font-weight="700" text-anchor="middle" fill="#E2E8F0">TWAI driver</text>
+<text x="468.1" y="189.5" font-size="17" font-weight="700" text-anchor="middle" fill="#BBF7D0">Other node</text>
+<text x="66.4" y="261.2" font-size="15" fill="#BFDBFE">the driver calls Send(frame, t)</text>
+<rect x="143.2" y="277.4" width="131" height="22" rx="11" fill="#0E131A"/>
+<text x="208.8" y="293.5" font-size="14" font-weight="500" text-anchor="middle" fill="#9AA6B5">twai_transmit_v2</text>
+<rect x="161.9" y="321.4" width="93.8" height="22" rx="11" fill="#0E131A"/>
+<text x="208.8" y="337.5" font-size="14" font-weight="500" text-anchor="middle" fill="#9AA6B5">queued: Ok</text>
+<rect x="314" y="365.4" width="132.2" height="22" rx="11" fill="#0E131A"/>
+<text x="380.1" y="381.5" font-size="14" font-weight="500" text-anchor="middle" fill="#9AA6B5">frame on the bus</text>
+<rect x="343.5" y="409.4" width="73.3" height="22" rx="11" fill="#0E131A"/>
+<text x="380.1" y="425.5" font-size="14" font-weight="500" text-anchor="middle" fill="#9AA6B5">ACK slot</text>
+<rect x="324.5" y="453.4" width="111.2" height="22" rx="11" fill="#0E131A"/>
+<text x="380.1" y="469.5" font-size="14" font-weight="500" text-anchor="middle" fill="#9AA6B5">a frame for us</text>
+<text x="66.4" y="533.2" font-size="15" fill="#BFDBFE">the driver calls Receive(frame, t)</text>
+<rect x="145.9" y="549.5" width="125.7" height="22" rx="11" fill="#0E131A"/>
+<text x="208.8" y="565.5" font-size="14" font-weight="500" text-anchor="middle" fill="#9AA6B5">twai_receive_v2</text>
+<rect x="168.6" y="593.5" width="80.3" height="22" rx="11" fill="#0E131A"/>
+<text x="208.8" y="609.5" font-size="14" font-weight="500" text-anchor="middle" fill="#9AA6B5">the frame</text>
+<text x="66.4" y="673.2" font-size="15" fill="#FDE68A">bus-off: BusError until Recover()</text>
+</svg>

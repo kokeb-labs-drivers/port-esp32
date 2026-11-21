@@ -13,6 +13,16 @@ satisfies `kb::iface::SpiDevice` and `kb::iface::SpiClockControl`. ESP-IDF `spi_
 | `SetClockHz(hz)` | `spi_bus_remove_device` and `spi_bus_add_device` with the new clock (ESP-IDF fixes the clock per device); on a refusal the device is added back at the old clock |
 | `Release()` | `spi_bus_remove_device` under the bus lock; `SpiBus::Release()` is `spi_bus_free` under the bus lock |
 
+<!-- figure: spi-transfer -->
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="../diagrams/spi-transfer.dark.svg">
+  <img src="../diagrams/spi-transfer.svg"
+    alt="Sequence of an SPI Transfer on the ESP32 port, in which the device takes the bus lock, ESP-IDF
+    clocks the whole frame as one polling transaction with chip select low, and the port waits for its
+    end with a bound sized to the frame.">
+</picture>
+<!-- /figure -->
+
 A frame is one transaction, so the hardware holds chip select for the whole frame. A read-only frame (`tx` empty)
 clocks zeros from an internal, word-aligned zero buffer of 64 bytes. The sampling point is ESP-IDF's default
 (`SPI_SAMPLING_POINT_PHASE_0`, the zero-initialised device configuration), the only one the ESP32-C6 supports

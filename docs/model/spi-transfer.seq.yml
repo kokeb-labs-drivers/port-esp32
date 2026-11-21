@@ -1,0 +1,39 @@
+---
+kind: seq
+id: spi-transfer
+title: One SPI frame
+kicker: port-esp32
+subtitle: Transfer through SpiDevice and ESP-IDF's spi_master in polling mode, chip select held for the frame.
+alt: >-
+  Sequence of an SPI Transfer on the ESP32 port, in which the device takes the bus lock, ESP-IDF clocks the whole
+  frame as one polling transaction with chip select low, and the port waits for its end with a bound sized to the
+  frame.
+reads: >-
+  The driver's Transfer call reaches the SpiDevice, which takes the lock of its SPI host within its timeout; with DMA
+  the frame is first copied into the host's own DMA buffer. ESP-IDF's spi_master starts one polling transaction: it
+  drives chip select low, clocks every byte to the Device and reads its reply, then raises chip select. The SpiDevice
+  waits for the end of the transaction for the frame's wire time plus the timeout, and once more; a transaction that
+  never ends marks the host failed. The result returns to the driver as a kb::Status.
+profile: phone
+print: portrait
+sources:
+  - src/spi.cpp
+  - src/boundary/spi.cpp
+  - inc/kb/port/esp32/spi.hpp
+participants:
+  - {id: ctl, label: SpiDevice, tone: amber}
+  - {id: idf, label: spi_master, tone: slate}
+  - {id: dev, label: Device, tone: green}
+steps:
+  - {note: "the driver calls Transfer(tx, rx)", over: [ctl, idf], tone: blue}
+  - {from: ctl, to: ctl, label: take bus lock}
+  - {note: "with DMA: tx into the DMA buffer", over: [ctl, idf]}
+  - {from: ctl, to: idf, label: polling_start}
+  - {from: idf, to: dev, label: "CS low, SCLK, MOSI"}
+  - {from: dev, to: idf, label: MISO bytes, return: true}
+  - {from: idf, to: dev, label: CS high}
+  - {from: ctl, to: idf, label: "polling_end (W + T)"}
+  - {from: idf, to: ctl, label: esp_err_t, return: true}
+  - {note: "still running: wait again, then fail", over: [ctl, idf]}
+  - {from: ctl, to: ctl, label: unlock}
+  - {note: kb::Status back to the driver, over: [ctl, idf], tone: blue}
