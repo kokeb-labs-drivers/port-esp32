@@ -19,6 +19,8 @@ behaviour.
 | I2C | `i2c_master_bus_reset` reports an error when no line is held | Ignored at start-up |
 | I2C | `i2c_master_device_change_address` returns `ESP_ERR_INVALID_ARG` without giving its bus lock back | Never reached: the port checks 0x08 to 0x77 first |
 | SPI | `spi_device_polling_start` and `spi_device_acquire_bus` take only `portMAX_DELAY` | `acquire_bus` is never called (one transaction per frame); `polling_start` only under the port's bus lock, on a host the port owns and that has no unfinished transaction |
+| SPI | `setup_dma_priv_buffer` allocates a DMA-capable copy per transaction for a buffer that is not DMA-capable or not aligned (and, on a cached chip, a receive not in whole cache lines) | Staging buffers; `SPI_TRANS_DMA_BUFFER_ALIGN_MANUAL` on every DMA transaction makes ESP-IDF refuse instead ([DMA](dma.md)) |
+| ADC | The continuous pool-overflow callback gets no event data; the driver reuses its five frame buffers; `adc_continuous_read` rounds its millisecond timeout down to ticks | A separate overflow callback; the frame copied in the callback; the pool read only with timeout 0 ([DMA](dma.md)) |
 | SPI | `spi_device_polling_end` returns `ESP_ERR_TIMEOUT` with the transaction in flight, the SDK bus lock held and the device not removable; it keeps a pointer to the transaction descriptor | The wait is sized to the wire time; a second wait; then the host is marked failed; descriptors live in a static table |
 | SPI | A DMA buffer that is not DMA-capable or aligned gets a heap copy per transaction; on chips without a cache only the address is checked, and every receive descriptor is rounded up to whole words, so the DMA can write up to 3 bytes past a buffer whose length is not a multiple of 4 | Every DMA frame goes through a port-owned, aligned buffer per host, allocated once; the buffer outlives a failed host |
 | I2C | The hardware SCL limit (`scl_wait_us`) is capped per chip and rounded up to a power of two of the clock (newer chips) | The time bands use the capped value, which a stretch timeout can never undercut |
@@ -43,7 +45,9 @@ fetch it, and kb-core has no release tag yet. The port therefore carries an **un
 it builds against in `third_party/kb-core`, at the commit recorded in `third_party/kb-core.lock` with the ref it
 was taken from and the SHA-256 of every file:
 
-- `tools/kb_core_snapshot.py --update <kb-core checkout>` is the only writer. It refuses a checkout with local
+- `tools/kb_core_snapshot.py --update <kb-core checkout>` is the only writer. It copies the paths kb-core's
+  `tools/layout/layout.py vendor` lists (what a vendoring consumer needs), or its own list for an older checkout.
+  It refuses a checkout with local
   changes in the copied paths, and a commit that is neither tagged nor on kb-core's `main` branch, so the lock
   never names a state that kb-core can delete (a pull-request branch);
 - `tools/kb_core_snapshot.py --check` and every CMake configure re-hash every file against the lock; a difference
@@ -53,7 +57,7 @@ was taken from and the SHA-256 of every file:
 
 | kb-core | Commit | Parts used |
 | --- | --- | --- |
-| `main` (no release tag yet) | see `third_party/kb-core.lock` | `utils`, `rtos` (FreeRTOS backend on target, none backend on the host), `interfaces` |
+| `main` (no release tag yet) | see `third_party/kb-core.lock` | `utils`, `rtos` (FreeRTOS backend on target, none backend on the host), `interfaces`, `dma` (and its host DMA-and-cache model for the conformance tests) |
 
 ### The plan
 

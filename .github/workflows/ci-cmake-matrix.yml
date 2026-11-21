@@ -1,6 +1,7 @@
 ---
-# The ESP32 examples built in the ESP-IDF v5.5 container: port_selftest (the port and kb-core) for
-# every ESP32 target. Calls kokeb-labs/ci-tools ru-cmake-matrix.
+# The ESP32 examples and the DMA bench apps built in the ESP-IDF v5.5 container: port_selftest (the port and
+# kb-core) for every ESP32 target, the bench apps (tests/target/dma) for the bench chips. Calls kokeb-labs/ci-tools
+# ru-cmake-matrix.
 name: ESP32 examples
 
 on:
@@ -37,3 +38,27 @@ jobs:
           "cmake_args": "-DIDF_TARGET=esp32h2 -DAPP_TYPE=port_selftest -DAPP_SOURCE_FILE=port_selftest.cpp"},
          {"name": "esp32p4", "toolchain": "esp-idf:esp32p4",
           "cmake_args": "-DIDF_TARGET=esp32p4 -DAPP_TYPE=port_selftest -DAPP_SOURCE_FILE=port_selftest.cpp"}]
+
+  bench:
+    name: DMA bench apps per target
+    uses: kokeb-labs/ci-tools/.github/workflows/ru-cmake-matrix.yml@dc7332736ae931501f30513c33d0c51e9c693a80 # v1
+    permissions:
+      contents: read
+    with:
+      esp_idf_image: "espressif/idf:v5.5.6@sha256:bf72fe7a15c22849a9a94147301165a545fb8905d97c176cf748e3e4614cac84"
+      submodules: "false"
+      source_dir: tests/target/dma
+      build_type: Release
+      max_parallel: "4"
+      # The bench apps of docs/assurance/bench/: SPI on the three bench chips (T8 on the ESP32), ADC on the C6 and S3.
+      matrix: >-
+        [{"name": "spi-esp32c6", "toolchain": "esp-idf:esp32c6",
+          "cmake_args": "-DIDF_TARGET=esp32c6 -DAPP_TYPE=dma_spi_bench -DAPP_SOURCE_FILE=dma_spi_bench.cpp"},
+         {"name": "spi-esp32s3", "toolchain": "esp-idf:esp32s3",
+          "cmake_args": "-DIDF_TARGET=esp32s3 -DAPP_TYPE=dma_spi_bench -DAPP_SOURCE_FILE=dma_spi_bench.cpp"},
+         {"name": "spi-esp32", "toolchain": "esp-idf:esp32",
+          "cmake_args": "-DIDF_TARGET=esp32 -DAPP_TYPE=dma_spi_bench -DAPP_SOURCE_FILE=dma_spi_bench.cpp"},
+         {"name": "adc-esp32c6", "toolchain": "esp-idf:esp32c6",
+          "cmake_args": "-DIDF_TARGET=esp32c6 -DAPP_TYPE=dma_adc_bench -DAPP_SOURCE_FILE=dma_adc_bench.cpp"},
+         {"name": "adc-esp32s3", "toolchain": "esp-idf:esp32s3",
+          "cmake_args": "-DIDF_TARGET=esp32s3 -DAPP_TYPE=dma_adc_bench -DAPP_SOURCE_FILE=dma_adc_bench.cpp"}]

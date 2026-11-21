@@ -52,3 +52,10 @@ never delete the unit while another channel reads it. `LastError()` is the calli
 | `InvalidArgument` | A negative pin, `ESP_ERR_INVALID_ARG` |
 | `Busy` | The unit's lock was not had in time (`ESP_ERR_NOT_FINISHED`) |
 | `NotReady` | Before `EnsureReady()` |
+
+## Continuous conversions
+
+`AdcStream<Frame, Frames>` (`adc_stream.hpp`; the port's default is `AdcStreamDefault`) runs ESP-IDF's ADC continuous
+mode into a `kb::dma::Stream`: frames copied in the conversion-done interrupt with its time, a pool overflow as a
+separate counted signal, the owner task reading the stream. A unit is either one-shot or continuous, not both. Rules
+and conformance: [DMA](../dma.md).

@@ -25,7 +25,9 @@
 
 #include "kb/interfaces/types.hpp"
 #include "kb/port/esp32/adc.hpp"
+#include "kb/port/esp32/adc_stream.hpp"
 #include "kb/port/esp32/can.hpp"
+#include "kb/port/esp32/dma.hpp"
 #include "kb/port/esp32/gpio.hpp"
 #include "kb/port/esp32/i2c.hpp"
 #include "kb/port/esp32/pwm.hpp"
@@ -85,7 +87,9 @@ void SleepMs(uint32_t ms) noexcept;
 [[nodiscard]] uint32_t I2cStretchLimitUs(uint32_t configured_us) noexcept;
 
 // --- SPI ----------------------------------------------------------------------------------------
-[[nodiscard]] int32_t SpiBusOpen(const SpiBusConfig& config) noexcept;
+/** @brief spi_bus_initialize() with a DMA channel (`dma`: SPI_DMA_CH_AUTO) or without, at
+ * `config.interrupt_level` (0: the SDK default). ESP_ERR_NOT_FOUND when no DMA channel is free. */
+[[nodiscard]] int32_t SpiBusOpen(const SpiBusConfig& config, bool dma) noexcept;
 [[nodiscard]] int32_t SpiBusClose(uint8_t host) noexcept;
 /** @brief Device slots of the handle table (slots are chosen by the logic). */
 [[nodiscard]] uint8_t SpiSlotCount() noexcept;
@@ -95,10 +99,11 @@ void SleepMs(uint32_t ms) noexcept;
 [[nodiscard]] int32_t SpiDeviceRemove(uint8_t slot) noexcept;
 /**
  * @brief spi_device_polling_start() of one transaction (descriptor kept in the slot's table entry
- * until it ends). An empty `tx` clocks zeros (at most SpiZeroBytes()).
+ * until it ends). An empty `tx` clocks zeros (at most SpiZeroBytes()). `dma`: the buffers are the
+ * host's staging and the transaction carries SPI_TRANS_DMA_BUFFER_ALIGN_MANUAL.
  */
-[[nodiscard]] int32_t SpiStart(uint8_t slot, std::span<const uint8_t> tx,
-                               std::span<uint8_t> rx) noexcept;
+[[nodiscard]] int32_t SpiStart(uint8_t slot, std::span<const uint8_t> tx, std::span<uint8_t> rx,
+                               bool dma) noexcept;
 /** @brief spi_device_polling_end(): waits at most `timeout_ms`; may be called again after a
  * timeout, the transaction stays in flight until it returns ESP_OK. */
 [[nodiscard]] int32_t SpiEnd(uint8_t slot, uint32_t timeout_ms) noexcept;
@@ -113,6 +118,42 @@ void SleepMs(uint32_t ms) noexcept;
                                        std::span<uint8_t>& rx) noexcept;
 /** @brief Frees the DMA buffer of `host` (after spi_bus_free succeeded). */
 void SpiDmaBufferClose(uint8_t host) noexcept;
+/** @brief The unit a DMA receive length must be a whole number of (the cache line on a chip whose
+ * internal RAM sits behind a cache, ESP32-P4; else 1). */
+[[nodiscard]] std::size_t SpiDmaRxUnit() noexcept;
+/**
+ * @brief spi_device_queue_trans() of one DMA transaction of `bytes` (interrupt-driven, manual
+ * alignment): `tx` empty means no MOSI phase, `rx` empty no MISO phase. The descriptor stays in
+ * the slot's table entry until SpiQueueResult() returns it.
+ */
+[[nodiscard]] int32_t SpiQueue(uint8_t slot, std::span<const std::byte> tx, std::span<std::byte> rx,
+                               std::size_t bytes) noexcept;
+/**
+ * @brief spi_device_get_trans_result(), waiting at most `timeout_ms` (0: no wait). ESP_OK: the
+ * transaction finished and the hardware no longer touches its buffers; ESP_ERR_TIMEOUT: still in
+ * flight. `flags` receives the raw error flags (dma_flags) of a finished transaction.
+ */
+[[nodiscard]] int32_t SpiQueueResult(uint8_t slot, uint32_t timeout_ms, uint32_t& flags) noexcept;
+/** @brief Stops the SPI master and its DMA of `host` without ESP-IDF's cooperation: ESP-IDF v5.5
+ * has no such call, so this returns ESP_ERR_NOT_SUPPORTED on target. */
+[[nodiscard]] int32_t SpiHostReset(uint8_t host) noexcept;
+
+/** @brief Raw DMA error flags of a finished transaction, as the boundary reports them. */
+namespace dma_flags {
+inline constexpr uint32_t kComplete = 1U;      ///< The transaction ran to its end.
+inline constexpr uint32_t kTransferError = 2U; ///< The DMA or the peripheral stopped it early.
+inline constexpr uint32_t kFifoError = 4U;     ///< A FIFO underflow or overflow was seen.
+} // namespace dma_flags
+
+// --- DMA memory and cache (esp_mm, esp_hw_support) ---------------------------------------------
+/** @brief esp_ptr_dma_capable() and esp_dma_is_buffer_alignment_satisfied() of `memory`. */
+[[nodiscard]] bool DmaMemoryUsable(std::span<const uint8_t> memory) noexcept;
+/** @brief esp_cache_msync(C2M) of whole lines. */
+[[nodiscard]] int32_t CacheWriteBack(std::span<const std::byte> range) noexcept;
+/** @brief esp_cache_msync(M2C) of whole lines. */
+[[nodiscard]] int32_t CacheInvalidate(std::span<std::byte> range) noexcept;
+/** @brief A full memory barrier. */
+void MemoryBarrier() noexcept;
 
 // --- UART ---------------------------------------------------------------------------------------
 [[nodiscard]] int32_t UartOpen(const UartConfig& config) noexcept;
@@ -169,6 +210,51 @@ void SpiDmaBufferClose(uint8_t host) noexcept;
 [[nodiscard]] int32_t AdcToMillivolts(uint8_t slot, int32_t raw, int32_t& mv) noexcept;
 /** @brief The ADC's output width in bits. */
 [[nodiscard]] uint8_t AdcBits() noexcept;
+
+// --- ADC continuous (esp_adc) --------------------------------------------------------------------
+/** @brief One channel of a continuous conversion pattern. */
+struct AdcStreamChannel {
+  uint8_t unit{0U};
+  uint8_t channel{0U};
+};
+/** @brief What adc_continuous_new_handle() and adc_continuous_config() are given. */
+struct AdcStreamSetup {
+  std::span<const AdcStreamChannel> channels; ///< The pattern, all on one unit.
+  AdcAttenuation attenuation{AdcAttenuation::Db12};
+  uint32_t sample_hz{0U};      ///< Conversions per second, all channels together.
+  std::size_t frame_bytes{0U}; ///< conv_frame_size.
+  std::size_t pool_bytes{0U};  ///< max_store_buf_size (the SDK's pool; flush_pool off).
+  bool iram_safe{false};       ///< The board needs the ISR path safe while the flash cache is off.
+};
+/**
+ * @brief adc_continuous_new_handle(), adc_continuous_config() and the callbacks (on_conv_done and
+ * a separate on_pool_ovf, both in IRAM), which call `sink`'s entry points with the time read in
+ * the interrupt. With `setup.iram_safe`: ESP_ERR_NOT_SUPPORTED unless
+ * CONFIG_ADC_CONTINUOUS_ISR_IRAM_SAFE is set, ESP_ERR_INVALID_ARG unless the entry points are in
+ * IRAM and `sink` in internal RAM. One stream at a time (ESP_ERR_NOT_ALLOWED for a second).
+ */
+[[nodiscard]] int32_t AdcStreamOpen(const AdcStreamSetup& setup, AdcStreamSink& sink) noexcept;
+[[nodiscard]] int32_t AdcStreamStart() noexcept; ///< adc_continuous_start().
+[[nodiscard]] int32_t AdcStreamStop() noexcept;  ///< adc_continuous_stop().
+[[nodiscard]] int32_t AdcStreamClose() noexcept; ///< adc_continuous_deinit().
+/** @brief Empties the SDK's pool without waiting (adc_continuous_read with timeout 0), so that
+ * on_pool_ovf means the owner task fell behind; the bytes were already copied by the ISR. */
+[[nodiscard]] int32_t AdcStreamDrainPool() noexcept;
+/** @brief SOC_ADC_DIGI_RESULT_BYTES: bytes of one conversion result. */
+[[nodiscard]] std::size_t AdcResultBytes() noexcept;
+/** @brief SOC_ADC_DIGI_DATA_BYTES_PER_CONV: a frame is a whole number of these. */
+[[nodiscard]] std::size_t AdcConvBytes() noexcept;
+/** @brief The frame unit of the chip: the cache line on the ESP32-P4, else AdcConvBytes(). */
+[[nodiscard]] std::size_t AdcFrameUnit() noexcept;
+/** @brief The frame buffers the SDK's DMA ring cycles through (INTERNAL_BUF_NUM of v5.5: 5). */
+[[nodiscard]] uint32_t AdcSdkFrameBuffers() noexcept;
+/** @brief SOC_ADC_SAMPLE_FREQ_THRES_LOW and _HIGH. */
+[[nodiscard]] uint32_t AdcStreamMinHz() noexcept;
+[[nodiscard]] uint32_t AdcStreamMaxHz() noexcept; ///< See AdcStreamMinHz.
+/** @brief Decodes one result (adc_digi_output_data_t of the chip's output format). */
+[[nodiscard]] bool AdcResultDecode(std::span<const uint8_t> result, AdcSample& out) noexcept;
+/** @brief Encodes one result in the chip's output format (the fallback producer's frames). */
+[[nodiscard]] bool AdcResultEncode(const AdcSample& sample, std::span<uint8_t> out) noexcept;
 
 // --- LEDC ---------------------------------------------------------------------------------------
 [[nodiscard]] int32_t LedcTimer(uint8_t timer, uint32_t hz, uint8_t bits) noexcept;

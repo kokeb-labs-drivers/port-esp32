@@ -31,8 +31,10 @@ ROOT = Path(__file__).resolve().parent.parent
 DEST = ROOT / "third_party" / "kb-core"
 LOCK = ROOT / "third_party" / "kb-core.lock"
 REPO = "https://github.com/kokeb-labs/kb-core"
-# What the port builds against: the CMake entry and modules, the three parts it uses, the RTOS-free and FreeRTOS
-# backends, the host test port and the test harness. Documentation, drivers and the other parts are not copied.
+# What the port builds against when the checkout cannot say (kb-core before `tools/layout/layout.py vendor`): the
+# CMake entry and modules, the parts it uses (utils, rtos, interfaces, dma with its host model), the RTOS-free and
+# FreeRTOS backends, the host test port and the test harness. A checkout that has `layout.py vendor` is copied by
+# that list instead, so the port takes exactly what kb-core says a vendoring consumer needs.
 PATHS = (
     "LICENSE",
     "CMakeLists.txt",
@@ -44,6 +46,9 @@ PATHS = (
     "components/lib/rtos/inc",
     "components/lib/rtos/backends/none",
     "components/lib/rtos/backends/freertos",
+    "components/lib/dma/CMakeLists.txt",
+    "components/lib/dma/inc",
+    "components/lib/dma/host",
     "components/lib/interfaces/CMakeLists.txt",
     "components/lib/interfaces/inc",
     "components/lib/interfaces/host",
@@ -57,9 +62,22 @@ def sha256(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
-def files_under(base: Path) -> list[str]:
+def vendor_paths(base: Path) -> tuple[str, ...]:
+    """The paths `tools/layout/layout.py vendor` of the checkout prints, else PATHS."""
+    tool = base / "tools" / "layout" / "layout.py"
+    if not tool.is_file():
+        return PATHS
+    run = subprocess.run([sys.executable, "-I", str(tool), "vendor"], cwd=base, check=False, capture_output=True,
+                         text=True)
+    listed = tuple(line.strip() for line in run.stdout.splitlines() if line.strip())
+    if run.returncode != 0 or not listed:
+        raise SystemExit(f"kb_core_snapshot: `layout.py vendor` failed in {base}: {run.stderr.strip()}")
+    return listed
+
+
+def files_under(base: Path, paths: tuple[str, ...]) -> list[str]:
     out: list[str] = []
-    for rel in PATHS:
+    for rel in paths:
         p = base / rel
         if p.is_file():
             out.append(rel)
@@ -121,11 +139,12 @@ def released_ref(src: Path, commit: str) -> str:
 def update(src: Path) -> int:
     commit = git(src, "rev-parse", "HEAD").stdout.strip()
     ref = released_ref(src, commit)
-    dirty = subprocess.run(["git", "-C", str(src), "status", "--porcelain", "--", *PATHS], check=True,
+    paths = vendor_paths(src)
+    dirty = subprocess.run(["git", "-C", str(src), "status", "--porcelain", "--", *paths], check=True,
                            capture_output=True, text=True).stdout.strip()
     if dirty:
         raise SystemExit("kb_core_snapshot: the checkout has local changes in the copied paths")
-    rels = files_under(src)
+    rels = files_under(src, paths)
     if DEST.exists():
         shutil.rmtree(DEST)
     lines = ["# The kb-core files in third_party/kb-core, written by tools/kb_core_snapshot.py --update. Never edit.",

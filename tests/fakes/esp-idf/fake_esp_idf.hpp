@@ -85,6 +85,23 @@ void SpiReportKhz(int khz);
 [[nodiscard]] size_t HeapLastAlign();
 /** @brief What esp_ptr_in_iram answers. */
 void IramAll(bool on);
+/** @brief The hardware runs `us` (fake time) on every host: transactions in flight progress. */
+void SpiElapse(uint64_t us);
+/** @brief intr_flags of the last spi_bus_initialize (-1: none yet). */
+[[nodiscard]] int SpiIntrFlags();
+/** @brief flags of the last transaction started or queued. */
+[[nodiscard]] uint32_t SpiLastFlags();
+/** @brief spi_bus_initialize with DMA finds no free channel (ESP_ERR_NOT_FOUND). */
+void SpiDmaExhausted(bool on);
+/** @brief The next queued transaction ends with SPI_TRANS_DMA_RX_FAIL (ESP_ERR_INVALID_STATE). */
+void SpiDmaLost(bool on);
+/** @brief What esp_ptr_dma_capable answers (default true). */
+void DmaCapable(bool on);
+/** @brief What esp_ptr_internal answers (default true). */
+void InternalAll(bool on);
+/** @brief esp_cache_msync calls and the flags of the last. */
+[[nodiscard]] uint32_t CacheSyncs();
+[[nodiscard]] int CacheLastFlags();
 
 // --- UART
 // ---------------------------------------------------------------------------------------------
@@ -121,6 +138,18 @@ void AdcRaw(int raw);
 [[nodiscard]] int AdcCalisAlive();
 /** @brief default_vref of the last line-fitting calibration. */
 [[nodiscard]] uint32_t AdcDefaultVref();
+/** @brief ADC continuous: the driver exists / runs; what it was given. */
+[[nodiscard]] bool AdcStreamAlive();
+[[nodiscard]] bool AdcStreamRunning();
+[[nodiscard]] const adc_continuous_handle_cfg_t& AdcStreamHandleConfig();
+[[nodiscard]] const adc_continuous_config_t& AdcStreamConfig();
+[[nodiscard]] const std::vector<adc_digi_pattern_config_t>& AdcStreamPattern();
+/** @brief One finished frame, as the SDK's interrupt delivers it: into the pool (if not full),
+ * on_conv_done, then on_pool_ovf when the pool was full; the frame buffer is then reused. */
+bool AdcStreamFrame(std::span<const uint8_t> bytes);
+/** @brief Frames waiting in the SDK's pool; adc_continuous_read calls. */
+[[nodiscard]] uint32_t AdcStreamPool();
+[[nodiscard]] uint32_t AdcStreamReads();
 
 // --- TWAI
 // ---------------------------------------------------------------------------------------------

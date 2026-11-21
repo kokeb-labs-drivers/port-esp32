@@ -16,6 +16,9 @@
  * | `MonotonicClock` | `Clock` | time.hpp |
  * | `BusyWait` | `BusyWait` | time.hpp |
  * | `LogSink` | `LogSink` | log.hpp |
+ * | `kb::dma::CacheOps` | `EspCacheOps` | dma.hpp |
+ * | `kb::dma::ReportsCapabilities` | `SpiBus`, `SpiDmaChannel<R>`, `AdcStream<F, N>` | spi.hpp,
+ * spi_dma.hpp, adc_stream.hpp |
  *
  * SPDX-License-Identifier: MIT
  * Copyright (c) 2026 The port-esp32 authors
@@ -27,13 +30,16 @@
 
 #include "kb/interfaces/interfaces.hpp"
 #include "kb/port/esp32/adc.hpp"
+#include "kb/port/esp32/adc_stream.hpp"
 #include "kb/port/esp32/can.hpp"
+#include "kb/port/esp32/dma.hpp"
 #include "kb/port/esp32/error.hpp"
 #include "kb/port/esp32/gpio.hpp"
 #include "kb/port/esp32/i2c.hpp"
 #include "kb/port/esp32/log.hpp"
 #include "kb/port/esp32/pwm.hpp"
 #include "kb/port/esp32/spi.hpp"
+#include "kb/port/esp32/spi_dma.hpp"
 #include "kb/port/esp32/time.hpp"
 #include "kb/port/esp32/uart.hpp"
 #include "kb/port/esp32/version.hpp"
@@ -54,5 +60,10 @@ static_assert(std::is_constructible_v<kb::iface::BusyWaitRef, BusyWait&>);
 static_assert(std::is_constructible_v<kb::iface::LogSinkRef, LogSink&>);
 
 } // namespace kb::port::esp32
+
+static_assert(kb::dma::ReportsCapabilities<kb::port::esp32::SpiBus>);
+static_assert(
+    kb::dma::ReportsCapabilities<kb::port::esp32::SpiDmaChannel<kb::port::esp32::InternalRam>>);
+static_assert(kb::dma::ReportsCapabilities<kb::port::esp32::AdcStreamDefault>);
 
 #endif // KB_PORT_ESP32_PORT_HPP

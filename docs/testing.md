@@ -69,3 +69,11 @@ whose wait ends because a running call returned is tested with two threads that 
 The port has not been run on hardware by this repository's CI: the host tests prove the logic and the SDK call
 sequence against fakes, and the ESP-IDF builds prove it compiles and links for each target. Timing on silicon
 (clock stretching limits, bus recovery on a real stuck slave, TWAI bus-off recovery) needs a bench run per target.
+
+## DMA conformance
+
+`kb_port_esp32_conformance` runs kb-core's DMA conformance suite (cases T1 to T18) against the port's real classes,
+with their boundary calls linked against kb-core's host DMA-and-cache model (`tests/dma_model/`), and prints one
+`CONFORMANCE <case> <variant> PASS|FAIL` line per case and variant. The results and how each case applies to the ESP32
+are in [DMA](dma.md#conformance); the bench apps for the same paths on real boards are in `tests/target/dma/`
+([bench kit](assurance/bench/README.md)), built in CI for esp32c6, esp32s3 and esp32.

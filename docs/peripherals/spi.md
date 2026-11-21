@@ -38,7 +38,7 @@ transactions would need, so frames are never split.
 | Pins | Any GPIO through the GPIO matrix; the IO MUX pins of the host allow the full 80 MHz |
 | Clock | `clock_hz` up to 80 MHz on IO MUX pins, about 26 MHz through the GPIO matrix (ESP-IDF rounds to the nearest divider) |
 | Mode | 0 to 3 (CPOL, CPHA) |
-| DMA | Off by default: the CPU copies the data through the FIFO, buffers may be anywhere. With `dma` every frame is copied into and out of the host's DMA buffer under the bus lock, so any caller buffer works (stack, unaligned, odd lengths), the port allocates nothing per transfer, and the DMA's rounding of receive lengths up to whole words (ESP-IDF rounds every receive descriptor; ESP32 notes: "DMA may overwrite the data in the unaligned part") only ever writes port memory. Memory: twice `dma_buffer_bytes` per DMA host, rounded up to the alignment. On a chip whose internal RAM sits behind a cache (ESP32-P4, 64-byte lines) ESP-IDF still bounces a receive whose length is not a whole number of cache lines through a heap block of its own, per transfer (`setup_dma_priv_buffer`); full-duplex receive cannot be longer than the frame, so the port cannot pad it. Frames sized in whole lines avoid it; a transient lack of heap there is reported as `Busy` (detail `ESP_ERR_NO_MEM`). On the ESP32-C3 and ESP32-H2, which have little RAM, set `dma_buffer_bytes` to the largest frame of the drivers on the host |
+| DMA | Off by default: the CPU copies the data through the FIFO, buffers may be anywhere. With `dma` every frame is copied into and out of the host's staging buffer under the bus lock, so any caller buffer works (stack, unaligned, odd lengths, PSRAM) and the DMA's rounding of receive lengths up to whole words only ever writes port memory. The staging buffer is the board's static `SpiStaging<N>` (`SpiBusConfig::staging`) or, without one, one block allocated in `EnsureReady()`; either is checked to be DMA-capable and aligned. Every DMA transaction carries `SPI_TRANS_DMA_BUFFER_ALIGN_MANUAL`, so ESP-IDF refuses instead of allocating: nothing is allocated per transfer. On the ESP32-P4 (internal RAM behind 64-byte cache lines) a DMA receive must be whole lines in length, a shorter one is refused with `InvalidArgument`. No free DMA channel: `Unsupported`, or with `dma_fallback` the FIFO path, reported by `Capabilities()` and `Health()`. Rules, regions and conformance: [DMA](../dma.md) |
 
 ## Timing limits
 
@@ -87,14 +87,17 @@ hang on the SDK's lock. Restart the application to use the host again.
 A `Timeout` frame was fully clocked: a driver that retries on `Timeout` repeats it, which matters for
 non-idempotent frames (an EEPROM write, a FIFO read, a motor command).
 
-With DMA, the transaction of a failed host still points at the host's DMA buffer, which the port keeps (it is
-freed only after `spi_bus_free` succeeds, which ESP-IDF refuses while the device is attached), so a late
-completion can only write port memory, never a caller's buffer that has since gone out of scope.
+With DMA, the transaction of a failed host still points at the host's staging buffer, which the port keeps held
+(`Health().quarantined`; an allocated one is freed only after `spi_bus_free` succeeds, which ESP-IDF refuses while
+the device is attached), so a late completion can only write port memory, never a caller's buffer that has since
+gone out of scope.
 
 ## Frame limits and drivers
 
-Drivers can check the limit at build time: `kb::port::esp32::kSpiMaxFrameBytes` (64, without DMA) and
-`kSpiMaxDmaFrameBytes` (4092, the largest DMA buffer); `SpiBus::MaxFrameBytes()` gives the configured one.
+Drivers and bindings check the limit at build time: `kb::port::esp32::SpiLimits<Target, Dma, StagingBytes>::kBus` is a
+`kb::dma::BusLimits`, and `kb::dma::RequireBusCarries<Bus, Driver::kMaxFrameBytes>()` fails the build when the bus
+cannot carry the driver's largest frame (`kSpiMaxFrameBytes`, 64, without DMA; the staging frame, at most
+`kSpiMaxDmaFrameBytes` 4092, with it). `SpiBus::MaxFrameBytes()` gives the configured one at run time.
 
 | Driver | Longest frame with chip select held | On this port |
 | --- | --- | --- |
@@ -103,7 +106,7 @@ Drivers can check the limit at build time: `kb::port::esp32::kSpiMaxFrameBytes` 
 | at25040b | 18 (chunked by the driver) | Works without DMA |
 | as5047u, ads7952, tle92466ed, max22200 | 2 to 4 | Works without DMA |
 | isf15acp4 | 96 pixel bytes per data transfer | Needs `dma = true`, or the driver's data chunk at 60 bytes or less |
-| bmp581 (SPI) | 97 | Needs `dma = true` (the DMA buffer takes its member buffers as they are) |
+| bmp581 (SPI) | 97 | Needs `dma = true` (the staging buffer takes its member buffers as they are) |
 | bno08x (SPI) | up to 1028 | Needs `dma = true`, `dma_buffer_bytes` at least the driver's read buffer |
 
 ## Example

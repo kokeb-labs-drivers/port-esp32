@@ -1,0 +1,11 @@
+# ESP-IDF linker fragment of the component kb_port_esp32: with CONFIG_ADC_CONTINUOUS_ISR_IRAM_SAFE the ADC
+# stream's interrupt path (the port's default AdcStream instantiation in src/adc_stream.cpp, and the kb::dma::Stream
+# producer code it instantiates) runs from IRAM, so a conversion-done interrupt is served while the flash cache is
+# off (NVS or OTA writes). The boundary's callbacks are IRAM_ATTR in src/boundary/adc.cpp. Docs: docs/dma.md.
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 The port-esp32 authors
+[mapping:kb_port_esp32]
+archive: libkb_port_esp32.a
+entries:
+    if ADC_CONTINUOUS_ISR_IRAM_SAFE = y:
+        adc_stream (noflash)

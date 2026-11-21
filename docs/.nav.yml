@@ -13,6 +13,7 @@ nav:
       - PWM (LEDC): peripherals/pwm.md
       - CAN (TWAI): peripherals/can.md
       - Clock, delay and log: peripherals/time-log.md
+  - DMA: dma.md
   - Error mapping: error-mapping.md
   - Thread safety: thread-safety.md
   - Examples: examples.md
@@ -21,4 +22,9 @@ nav:
       - MISRA boundary and deviations: deviations.md
       - SOUP and kb-core: soup.md
       - Figures: diagrams/index.md
+      - DMA bench kit:
+          - Overview: assurance/bench/README.md
+          - Procedure: assurance/bench/procedure-esp32.md
+          - Evidence form: assurance/bench/evidence-form.md
+          - Runs: assurance/bench/runs/README.md
   - Changelog: changelog.md

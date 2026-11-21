@@ -11,13 +11,13 @@ cmake_minimum_required(VERSION 3.25)
 
 # One source per public header (src/<stem>.cpp; tools/check_layout.py checks it), plus the internal claim tables.
 set(KB_PORT_ESP32_LOGIC_SOURCES
-    src/adc.cpp src/caller_record.cpp src/can.cpp src/claims.cpp src/gpio.cpp src/i2c.cpp src/log.cpp src/port.cpp
-    src/pwm.cpp src/spi.cpp src/time.cpp src/uart.cpp)
+    src/adc.cpp src/adc_stream.cpp src/caller_record.cpp src/can.cpp src/claims.cpp src/dma.cpp src/gpio.cpp
+    src/i2c.cpp src/log.cpp src/port.cpp src/pwm.cpp src/spi.cpp src/spi_dma.cpp src/time.cpp src/uart.cpp)
 # The only files that include ESP-IDF headers: src/boundary/, one file per SDK component
 # (deviations/boundary-files.yml).
 set(KB_PORT_ESP32_BOUNDARY_SOURCES
-    src/boundary/adc.cpp src/boundary/error.cpp src/boundary/gpio.cpp src/boundary/i2c.cpp src/boundary/log.cpp
-    src/boundary/pwm.cpp src/boundary/spi.cpp src/boundary/time.cpp src/boundary/uart.cpp)
+    src/boundary/adc.cpp src/boundary/dma.cpp src/boundary/error.cpp src/boundary/gpio.cpp src/boundary/i2c.cpp
+    src/boundary/log.cpp src/boundary/pwm.cpp src/boundary/spi.cpp src/boundary/time.cpp src/boundary/uart.cpp)
 # CAN: the TWAI boundary on chips that have the controller, else the stub that reports Unsupported.
 set(KB_PORT_ESP32_CAN_SOURCE src/boundary/can.cpp)
 set(KB_PORT_ESP32_NO_CAN_SOURCE src/boundary/no_can.cpp)
@@ -32,8 +32,10 @@ if(ESP_PLATFORM)
   # file from another folder.
   list(TRANSFORM KB_PORT_ESP32_LOGIC_SOURCES PREPEND "${CMAKE_CURRENT_LIST_DIR}/")
   list(TRANSFORM KB_PORT_ESP32_BOUNDARY_SOURCES PREPEND "${CMAKE_CURRENT_LIST_DIR}/")
+  # linker.lf: the ADC stream's interrupt path in IRAM when CONFIG_ADC_CONTINUOUS_ISR_IRAM_SAFE is set.
   idf_component_register(SRCS ${KB_PORT_ESP32_LOGIC_SOURCES} ${KB_PORT_ESP32_BOUNDARY_SOURCES}
                          INCLUDE_DIRS "${CMAKE_CURRENT_LIST_DIR}/inc"
+                         LDFRAGMENTS "${CMAKE_CURRENT_LIST_DIR}/linker.lf"
                          PRIV_INCLUDE_DIRS "${CMAKE_CURRENT_LIST_DIR}/src"
                          REQUIRES kb
                          PRIV_REQUIRES driver esp_adc esp_driver_gpio esp_driver_i2c esp_driver_ledc esp_driver_spi
@@ -65,7 +67,7 @@ add_library(kb_port_esp32_api INTERFACE)
 add_library(kb::port_esp32 ALIAS kb_port_esp32_api)
 target_compile_features(kb_port_esp32_api INTERFACE cxx_std_20)
 target_include_directories(kb_port_esp32_api INTERFACE "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/inc>")
-target_link_libraries(kb_port_esp32_api INTERFACE kb::interfaces kb::rtos kb::utils)
+target_link_libraries(kb_port_esp32_api INTERFACE kb::interfaces kb::dma kb::rtos kb::utils)
 
 # The platform-free logic alone (no SDK header anywhere): what the poison build of the layering check and the
 # Cortex-M cross build compile, with kb-core's strict flags.

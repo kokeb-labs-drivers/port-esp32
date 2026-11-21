@@ -1,0 +1,48 @@
+# The bench apps, read by the ESP-IDF build scripts. CI builds both (ci-cmake-matrix.yml); they run on a devkit by hand.
+version: "1.0"
+
+metadata:
+  project: "kb port ESP32 DMA bench"
+  default_app: "dma_spi_bench"
+  target: "esp32c6"
+  idf_versions: ["release/v5.5"]
+  build_types: [["Release"]]
+
+apps:
+  dma_spi_bench:
+    description: "SPI DMA staging, caller buffers, zero-copy, late completion, no allocation after start"
+    source_file: "dma_spi_bench.cpp"
+    category: "bench"
+    idf_versions: ["release/v5.5"]
+    build_types: ["Release"]
+    ci_enabled: true
+    hardware_required: true
+    features:
+      - "MOSI-MISO jumper"
+  dma_adc_bench:
+    description: "ADC continuous into the kb stream: rate, blocked consumer, NVS writes, stall, shape fallback"
+    source_file: "dma_adc_bench.cpp"
+    category: "bench"
+    idf_versions: ["release/v5.5"]
+    build_types: ["Release"]
+    ci_enabled: true
+    hardware_required: true
+    features:
+      - "Three ADC inputs on a divider"
+
+build_config:
+  build_types:
+    Release:
+      description: "Release build"
+      cmake_build_type: "Release"
+      optimization: "-Os"
+      debug_level: "-g"
+      defines: ["NDEBUG"]
+  build_directory_pattern: "build-app-{app_type}-type-{build_type}-target-{target}-idf-{idf_version}"
+  project_name_pattern: "kb_port_esp32_{app_type}"
+
+ci_config:
+  timeout_minutes: 30
+  fail_fast: false
+  exclude_combinations: []
+  special_apps: []

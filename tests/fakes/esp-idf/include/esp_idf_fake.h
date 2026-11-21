@@ -7,7 +7,9 @@
  * Variants (compile definitions): KB_FAKE_NO_TWAI (a chip without TWAI), KB_FAKE_LINE_FITTING (the
  * ESP32 calibration scheme instead of curve fitting, with CONFIG_IDF_TARGET_ESP32), KB_FAKE_IDF_V6
  * (ESP-IDF 6.0: a failed I2C transfer returns ESP_ERR_INVALID_RESPONSE), KB_FAKE_TICK_100 (a
- * 100 Hz RTOS tick, ESP-IDF's default).
+ * 100 Hz RTOS tick, ESP-IDF's default), KB_FAKE_ADC_IRAM_SAFE
+ * (CONFIG_ADC_CONTINUOUS_ISR_IRAM_SAFE). The line-fitting variant also has the ESP32's 2-byte
+ * continuous-mode results (type 1).
  *
  * Test code. SPDX-License-Identifier: MIT
  * Copyright (c) 2026 The port-esp32 authors
@@ -37,9 +39,24 @@
 #ifdef KB_FAKE_LINE_FITTING
 #define ADC_CALI_SCHEME_LINE_FITTING_SUPPORTED 1
 #define CONFIG_IDF_TARGET_ESP32 1
+#define SOC_ADC_DIGI_RESULT_BYTES (2)
 #else
 #define ADC_CALI_SCHEME_CURVE_FITTING_SUPPORTED 1
+#define SOC_ADC_DIGI_RESULT_BYTES (4)
 #endif
+#define SOC_ADC_DIGI_DATA_BYTES_PER_CONV (4)
+#define SOC_ADC_PATT_LEN_MAX (8)
+#define SOC_ADC_DIGI_MAX_BITWIDTH (12)
+#define SOC_ADC_MAX_CHANNEL_NUM (10)
+#define SOC_ADC_SAMPLE_FREQ_THRES_LOW 611
+#define SOC_ADC_SAMPLE_FREQ_THRES_HIGH 83333
+#ifdef KB_FAKE_ADC_IRAM_SAFE
+#define CONFIG_ADC_CONTINUOUS_ISR_IRAM_SAFE 1
+#endif
+
+/* --- esp_attr.h ------------------------------------------------------------------------------- */
+#define IRAM_ATTR
+#define DRAM_ATTR
 
 /* --- esp_idf_version.h ------------------------------------------------------------------------ */
 #define ESP_IDF_VERSION_VAL(major, minor, patch) ((major << 16) | (minor << 8) | (patch))
@@ -69,6 +86,8 @@ typedef int esp_err_t;
 #define ESP_ERR_NOT_FINISHED 0x10C
 #define ESP_ERR_NOT_ALLOWED 0x10D
 #define ESP_INTR_FLAG_LEVEL1 (1 << 1)
+#define ESP_INTR_FLAG_LEVEL2 (1 << 2)
+#define ESP_INTR_FLAG_LEVEL3 (1 << 3)
 
 /* --- FreeRTOS --------------------------------------------------------------------------------- */
 typedef uint32_t TickType_t;
@@ -106,6 +125,21 @@ uintptr_t fake_iram_high(void);
 #define SOC_IRAM_HIGH (fake_iram_high())
 esp_err_t esp_cache_get_alignment(uint32_t heap_caps, size_t* out_alignment);
 void vTaskDelay(TickType_t ticks);
+/* esp_memory_utils.h (fake::DmaCapable, fake::InternalAll decide the answers). */
+bool esp_ptr_dma_capable(const void* p);
+bool esp_ptr_internal(const void* p);
+/* esp_dma_utils.h */
+typedef struct {
+  int extra_heap_caps;
+  size_t dma_alignment_bytes;
+} esp_dma_mem_info_t;
+bool esp_dma_is_buffer_alignment_satisfied(const void* ptr, size_t size, esp_dma_mem_info_t info);
+/* esp_cache.h */
+#define ESP_CACHE_MSYNC_FLAG_DIR_C2M (1 << 2)
+#define ESP_CACHE_MSYNC_FLAG_DIR_M2C (1 << 3)
+esp_err_t esp_cache_msync(void* addr, size_t size, int flags);
+/* esp_cpu.h: each read advances the fake cycle counter by 100. */
+uint32_t esp_cpu_get_cycle_count(void);
 
 /* --- gpio ------------------------------------------------------------------------------------- */
 typedef enum { GPIO_NUM_NC = -1, GPIO_NUM_0 = 0, GPIO_NUM_MAX = SOC_GPIO_PIN_COUNT } gpio_num_t;
@@ -205,6 +239,9 @@ typedef enum { SPI1_HOST = 0, SPI2_HOST = 1, SPI3_HOST = 2 } spi_host_device_t;
 typedef enum { SPI_DMA_DISABLED = 0, SPI_DMA_CH_AUTO = 3 } spi_dma_chan_t;
 #define SPICOMMON_BUSFLAG_MASTER (1U << 0)
 #define SPI_TRANS_CS_KEEP_ACTIVE (1 << 8)
+#define SPI_TRANS_DMA_BUFFER_ALIGN_MANUAL (1 << 11)
+#define SPI_TRANS_DMA_RX_FAIL (1U << 30)
+#define SPI_TRANS_DMA_TX_FAIL (1U << 31)
 typedef struct {
   int mosi_io_num;
   int miso_io_num;
@@ -213,6 +250,7 @@ typedef struct {
   int quadhd_io_num;
   int max_transfer_sz;
   uint32_t flags;
+  int intr_flags;
 } spi_bus_config_t;
 typedef struct {
   uint8_t mode;
@@ -243,6 +281,10 @@ esp_err_t spi_device_polling_end(spi_device_handle_t handle, TickType_t ticks);
 esp_err_t spi_device_acquire_bus(spi_device_handle_t handle, TickType_t ticks);
 esp_err_t spi_device_get_actual_freq(spi_device_handle_t handle, int* freq_khz);
 void spi_device_release_bus(spi_device_handle_t handle);
+esp_err_t spi_device_queue_trans(spi_device_handle_t handle, spi_transaction_t* t,
+                                 TickType_t ticks);
+esp_err_t spi_device_get_trans_result(spi_device_handle_t handle, spi_transaction_t** t,
+                                      TickType_t ticks);
 
 /* --- uart ------------------------------------------------------------------------------------- */
 typedef int uart_port_t;
@@ -475,6 +517,84 @@ esp_err_t twai_transmit_v2(twai_handle_t handle, const twai_message_t* message, 
 esp_err_t twai_receive_v2(twai_handle_t handle, twai_message_t* message, TickType_t ticks);
 esp_err_t twai_get_status_info_v2(twai_handle_t handle, twai_status_info_t* info);
 esp_err_t twai_initiate_recovery_v2(twai_handle_t handle);
+
+/* --- esp_adc/adc_continuous.h ----------------------------------------------------------------- */
+typedef enum { ADC_CONV_SINGLE_UNIT_1 = 1, ADC_CONV_SINGLE_UNIT_2 = 2 } adc_digi_convert_mode_t;
+typedef enum {
+  ADC_DIGI_OUTPUT_FORMAT_TYPE1 = 0,
+  ADC_DIGI_OUTPUT_FORMAT_TYPE2 = 1
+} adc_digi_output_format_t;
+typedef struct {
+  uint8_t atten;
+  uint8_t channel;
+  uint8_t unit;
+  uint8_t bit_width;
+} adc_digi_pattern_config_t;
+/* The SDK nests unnamed structs in the union; the fake names them (ISO C++ has no nested anonymous
+ * types). */
+#if SOC_ADC_DIGI_RESULT_BYTES == 2
+struct fake_adc_type1 {
+  uint16_t data : 12;
+  uint16_t channel : 4;
+};
+typedef struct {
+  union {
+    struct fake_adc_type1 type1;
+    uint16_t val;
+  };
+} adc_digi_output_data_t;
+#else
+struct fake_adc_type2 {
+  uint32_t data : 12;
+  uint32_t reserved12 : 1;
+  uint32_t channel : 4;
+  uint32_t unit : 1;
+  uint32_t reserved18_31 : 14;
+};
+typedef struct {
+  union {
+    struct fake_adc_type2 type2;
+    uint32_t val;
+  };
+} adc_digi_output_data_t;
+#endif
+typedef struct adc_continuous_ctx_t* adc_continuous_handle_t;
+typedef struct {
+  uint32_t max_store_buf_size;
+  uint32_t conv_frame_size;
+  struct {
+    uint32_t flush_pool : 1;
+  } flags;
+} adc_continuous_handle_cfg_t;
+typedef struct {
+  uint32_t pattern_num;
+  adc_digi_pattern_config_t* adc_pattern;
+  uint32_t sample_freq_hz;
+  adc_digi_convert_mode_t conv_mode;
+  adc_digi_output_format_t format;
+} adc_continuous_config_t;
+typedef struct {
+  uint8_t* conv_frame_buffer;
+  uint32_t size;
+} adc_continuous_evt_data_t;
+typedef bool (*adc_continuous_callback_t)(adc_continuous_handle_t handle,
+                                          const adc_continuous_evt_data_t* edata, void* user_data);
+typedef struct {
+  adc_continuous_callback_t on_conv_done;
+  adc_continuous_callback_t on_pool_ovf;
+} adc_continuous_evt_cbs_t;
+esp_err_t adc_continuous_new_handle(const adc_continuous_handle_cfg_t* config,
+                                    adc_continuous_handle_t* handle);
+esp_err_t adc_continuous_config(adc_continuous_handle_t handle,
+                                const adc_continuous_config_t* config);
+esp_err_t adc_continuous_register_event_callbacks(adc_continuous_handle_t handle,
+                                                  const adc_continuous_evt_cbs_t* cbs,
+                                                  void* user_data);
+esp_err_t adc_continuous_start(adc_continuous_handle_t handle);
+esp_err_t adc_continuous_stop(adc_continuous_handle_t handle);
+esp_err_t adc_continuous_deinit(adc_continuous_handle_t handle);
+esp_err_t adc_continuous_read(adc_continuous_handle_t handle, uint8_t* buf, uint32_t length_max,
+                              uint32_t* out_length, uint32_t timeout_ms);
 
 /* --- esp_timer, esp_rom, esp_log -------------------------------------------------------------- */
 int64_t esp_timer_get_time(void);
