@@ -224,7 +224,7 @@ public:
   /** @brief Discards every line of `range` (whole lines of one buffer). */
   void Invalidate(std::span<std::byte> range) noexcept;
   /** @brief A full memory barrier before the DMA starts or after it stopped. */
-  void Barrier() noexcept;
+  static void Barrier() noexcept;
   /** @brief Syncs ESP-IDF refused since start (an unaligned or uncached range). */
   [[nodiscard]] uint32_t Failures() const noexcept {
     return failures_;

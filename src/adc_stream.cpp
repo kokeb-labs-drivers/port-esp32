@@ -122,7 +122,7 @@ kb::Status AdcStreamCore::Close() noexcept {
   return status;
 }
 
-void AdcStreamCore::Drain() noexcept { // NOLINT(readability-convert-member-functions-to-static)
+void AdcStreamCore::Drain() noexcept {
   static_cast<void>(sdk::AdcStreamDrainPool());
 }
 
@@ -138,9 +138,8 @@ void AdcStreamCore::cacheInterruptFacts(std::size_t frame_bytes) noexcept {
   lap_threshold_us_ = (sdk_buffers_ > 1U) ? (period * (sdk_buffers_ - 1U)) : 0U;
 }
 
-// NOLINTNEXTLINE(readability-convert-member-functions-to-static): part of the stream's interface
 kb::dma::Capabilities AdcStreamCore::Capabilities(std::size_t frame_bytes, std::size_t frames,
-                                                  bool dma) const noexcept {
+                                                  bool dma) noexcept {
   kb::dma::Capabilities c{};
   c.mode = dma ? kb::dma::TransferMode::Dma : kb::dma::TransferMode::Polled;
   c.zero_copy = false;      // frames are copied out in the interrupt

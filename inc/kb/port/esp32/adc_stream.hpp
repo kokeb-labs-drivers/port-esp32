@@ -120,7 +120,7 @@ public:
   [[nodiscard]] kb::Status Start() noexcept; ///< adc_continuous_start().
   [[nodiscard]] kb::Status Stop() noexcept;  ///< adc_continuous_stop().
   [[nodiscard]] kb::Status Close() noexcept; ///< adc_continuous_deinit(), pins released.
-  void Drain() noexcept;                     ///< Empties the SDK pool without waiting.
+  static void Drain() noexcept;              ///< Empties the SDK pool without waiting.
   /** @brief Microseconds after which a frame may have been lapped (0: no check); set by Open(). */
   [[nodiscard]] uint64_t LapThresholdUs() const noexcept {
     return lap_threshold_us_;
@@ -130,8 +130,8 @@ public:
     return sdk_buffers_;
   }
   /** @brief The capabilities of a stream of `frame_bytes` x `frames` in mode `dma`. */
-  [[nodiscard]] kb::dma::Capabilities Capabilities(std::size_t frame_bytes, std::size_t frames,
-                                                   bool dma) const noexcept;
+  [[nodiscard]] static kb::dma::Capabilities Capabilities(std::size_t frame_bytes,
+                                                          std::size_t frames, bool dma) noexcept;
   /** @brief Result `index` of `frame` (bytes as the chip wrote them). */
   [[nodiscard]] static kb::Status Decode(std::span<const uint8_t> frame, std::size_t index,
                                          AdcSample& out) noexcept;
@@ -244,7 +244,7 @@ public:
   /** @brief The oldest unread frame (see kb::dma::Stream::TryTake); empties the SDK pool first. */
   [[nodiscard]] kb::Status TryTake(FrameView& out) noexcept {
     if (core_.IsOpen()) {
-      core_.Drain();
+      AdcStreamCore::Drain();
     }
     return stream_.TryTake(out);
   }
@@ -278,7 +278,7 @@ public:
   }
   /** @brief What the stream offers now. */
   [[nodiscard]] kb::dma::Capabilities Capabilities() const noexcept {
-    return core_.Capabilities(sizeof(Frame), Frames, !fallback_);
+    return AdcStreamCore::Capabilities(sizeof(Frame), Frames, !fallback_);
   }
   /** @brief The DMA part of a handler's health record. */
   [[nodiscard]] kb::dma::DmaHealth Health() const noexcept {

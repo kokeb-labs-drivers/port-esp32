@@ -111,7 +111,7 @@ public:
                               std::size_t used) noexcept;
   /** @brief The transaction's end, waiting at most `wait_ms`; the esp_err_t (ESP_ERR_TIMEOUT: in
    * flight), the raw flags in `flags`. */
-  [[nodiscard]] int32_t Result(uint32_t wait_ms, uint32_t& flags) noexcept;
+  [[nodiscard]] int32_t Result(uint32_t wait_ms, uint32_t& flags) const noexcept;
   /** @brief W + T of a frame of `used` bytes, in milliseconds. */
   [[nodiscard]] uint32_t EndWaitMs(std::size_t used) const noexcept;
   /** @brief Marks the host failed after a stop that was not confirmed (counted). */

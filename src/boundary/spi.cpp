@@ -49,8 +49,8 @@ struct SpiSlot {
 };
 
 // The interrupt-allocation flag of a level (0: ESP-IDF's default, which may share a level 1 to 3).
-[[nodiscard]] int IntrFlags(uint8_t level) noexcept {
-  int flags = 0;
+[[nodiscard]] int32_t IntrFlags(uint8_t level) noexcept {
+  int32_t flags = 0;
   if (level == 1U) {
     flags = ESP_INTR_FLAG_LEVEL1;
   } else if (level == 2U) {
@@ -118,7 +118,7 @@ int32_t SpiBusOpen(const SpiBusConfig& config, bool dma) noexcept {
   bus.quadhd_io_num = -1;
   bus.max_transfer_sz = dma ? static_cast<int>(kSpiMaxDmaFrameBytes) : 0;
   bus.flags = SPICOMMON_BUSFLAG_MASTER;
-  bus.intr_flags = IntrFlags(config.interrupt_level);
+  bus.intr_flags = static_cast<int>(IntrFlags(config.interrupt_level));
   return spi_bus_initialize(SpiHost(config.host), &bus, dma ? SPI_DMA_CH_AUTO : SPI_DMA_DISABLED);
 }
 

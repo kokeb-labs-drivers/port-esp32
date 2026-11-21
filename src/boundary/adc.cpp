@@ -10,7 +10,6 @@
 #include <bit>
 #include <cstddef>
 #include <cstdint>
-#include <cstring>
 #include <span>
 
 #include "esp_adc/adc_cali.h"
@@ -233,9 +232,8 @@ IRAM_ATTR AdcStreamTable& StreamTable() noexcept {
 
 // on_conv_done: the frame goes to the port at once, with the time read here; the SDK's buffer
 // pointer is not kept.
-IRAM_ATTR bool OnConvDone(adc_continuous_handle_t handle, const adc_continuous_evt_data_t* edata,
-                          void* user_data) {
-  static_cast<void>(handle);
+IRAM_ATTR bool OnConvDone(adc_continuous_handle_t /*handle*/,
+                          const adc_continuous_evt_data_t* edata, void* user_data) {
   static_cast<void>(user_data);
   const uint32_t start = esp_cpu_get_cycle_count();
   AdcStreamSink* const sink = StreamTable().sink;
@@ -250,9 +248,8 @@ IRAM_ATTR bool OnConvDone(adc_continuous_handle_t handle, const adc_continuous_e
 }
 
 // on_pool_ovf: a separate callback; the SDK passes no data with it, and the port publishes none.
-IRAM_ATTR bool OnPoolOverflow(adc_continuous_handle_t handle,
+IRAM_ATTR bool OnPoolOverflow(adc_continuous_handle_t /*handle*/,
                               const adc_continuous_evt_data_t* edata, void* user_data) {
-  static_cast<void>(handle);
   static_cast<void>(edata);
   static_cast<void>(user_data);
   AdcStreamSink* const sink = StreamTable().sink;
@@ -290,7 +287,7 @@ template <typename Fn>
                       ? ESP_ERR_INVALID_ARG
                       : ESP_OK;
   for (std::size_t i = 0U; (err == ESP_OK) && (i < setup.channels.size()); ++i) {
-    pattern[i].atten = static_cast<uint8_t>(AttenOf(setup.attenuation));
+    pattern[i].atten = static_cast<uint8_t>(setup.attenuation); // the values of adc_atten_t
     pattern[i].channel = setup.channels[i].channel;
     pattern[i].unit = setup.channels[i].unit;
     pattern[i].bit_width = static_cast<uint8_t>(SOC_ADC_DIGI_MAX_BITWIDTH);
@@ -412,28 +409,49 @@ uint32_t AdcStreamMaxHz() noexcept {
   return static_cast<uint32_t>(SOC_ADC_SAMPLE_FREQ_THRES_HIGH);
 }
 
-// The SDK's result type is a union of per-chip bit fields; reading the member of the chip's format
-// is its documented use.
-// NOLINTBEGIN(cppcoreguidelines-pro-type-union-access)
-bool AdcResultDecode(std::span<const uint8_t> result, AdcSample& out) noexcept {
-  adc_digi_output_data_t r{};
-  bool ok = result.size() == sizeof(r);
-  if (ok) {
-    static_cast<void>(std::memcpy(&r, result.data(), sizeof(r)));
+// The bit layout of one conversion result (adc_digi_output_data_t of the chip's output format, as
+// hal/adc_types.h declares it), read and written as a little-endian integer.
+namespace {
 #if (SOC_ADC_DIGI_RESULT_BYTES == 2) && !defined(CONFIG_IDF_TARGET_ESP32S2)
-    out.unit = 0U;
-    out.channel = static_cast<uint8_t>(r.type1.channel);
-    out.raw = static_cast<uint16_t>(r.type1.data);
+constexpr uint32_t kDataMask = 0xFFFU; // type 1: data 12, channel 4
+constexpr uint32_t kChannelShift = 12U;
+constexpr uint32_t kChannelMask = 0xFU;
+constexpr uint32_t kUnitShift = 0U; // no unit field
+#elif defined(CONFIG_IDF_TARGET_ESP32S2)
+constexpr uint32_t kDataMask = 0x7FFU; // type 2: data 11, channel 4, unit 1
+constexpr uint32_t kChannelShift = 11U;
+constexpr uint32_t kChannelMask = 0xFU;
+constexpr uint32_t kUnitShift = 15U;
 #elif defined(CONFIG_IDF_TARGET_ESP32C6) || defined(CONFIG_IDF_TARGET_ESP32H2) ||                  \
     defined(CONFIG_IDF_TARGET_ESP32C5) || defined(CONFIG_IDF_TARGET_ESP32C61)
-    out.unit = 0U;
-    out.channel = static_cast<uint8_t>(r.type2.channel);
-    out.raw = static_cast<uint16_t>(r.type2.data);
+constexpr uint32_t kDataMask = 0xFFFU; // type 2: data 12, reserved 1, channel 4
+constexpr uint32_t kChannelShift = 13U;
+constexpr uint32_t kChannelMask = 0xFU;
+constexpr uint32_t kUnitShift = 0U;
+#elif defined(CONFIG_IDF_TARGET_ESP32C3) || defined(CONFIG_IDF_TARGET_ESP32C2)
+constexpr uint32_t kDataMask = 0xFFFU; // type 2: data 12, reserved 1, channel 3, unit 1
+constexpr uint32_t kChannelShift = 13U;
+constexpr uint32_t kChannelMask = 0x7U;
+constexpr uint32_t kUnitShift = 16U;
 #else
-    out.unit = static_cast<uint8_t>(r.type2.unit);
-    out.channel = static_cast<uint8_t>(r.type2.channel);
-    out.raw = static_cast<uint16_t>(r.type2.data);
+constexpr uint32_t kDataMask = 0xFFFU; // type 2 (S3, P4): data 12, reserved 1, channel 4, unit 1
+constexpr uint32_t kChannelShift = 13U;
+constexpr uint32_t kChannelMask = 0xFU;
+constexpr uint32_t kUnitShift = 17U;
 #endif
+static_assert(sizeof(adc_digi_output_data_t) == SOC_ADC_DIGI_RESULT_BYTES);
+} // namespace
+
+bool AdcResultDecode(std::span<const uint8_t> result, AdcSample& out) noexcept {
+  bool ok = result.size() == static_cast<std::size_t>(SOC_ADC_DIGI_RESULT_BYTES);
+  if (ok) {
+    uint32_t v = 0U;
+    for (std::size_t i = result.size(); i > 0U; --i) {
+      v = (v << 8U) | result[i - 1U];
+    }
+    out.raw = static_cast<uint16_t>(v & kDataMask);
+    out.channel = static_cast<uint8_t>((v >> kChannelShift) & kChannelMask);
+    out.unit = (kUnitShift == 0U) ? uint8_t{0U} : static_cast<uint8_t>((v >> kUnitShift) & 1U);
     ok = out.channel <
          static_cast<uint8_t>(SOC_ADC_MAX_CHANNEL_NUM); // the arbiter marks invalid data
   }
@@ -441,27 +459,20 @@ bool AdcResultDecode(std::span<const uint8_t> result, AdcSample& out) noexcept {
 }
 
 bool AdcResultEncode(const AdcSample& sample, std::span<uint8_t> out) noexcept {
-  adc_digi_output_data_t r{};
-  const bool ok =
-      (out.size() == sizeof(r)) && (sample.channel < static_cast<uint8_t>(SOC_ADC_MAX_CHANNEL_NUM));
+  const bool ok = (out.size() == static_cast<std::size_t>(SOC_ADC_DIGI_RESULT_BYTES)) &&
+                  (sample.channel < static_cast<uint8_t>(SOC_ADC_MAX_CHANNEL_NUM));
   if (ok) {
-#if (SOC_ADC_DIGI_RESULT_BYTES == 2) && !defined(CONFIG_IDF_TARGET_ESP32S2)
-    r.type1.channel = sample.channel & 0xFU;
-    r.type1.data = sample.raw & 0xFFFU;
-#elif defined(CONFIG_IDF_TARGET_ESP32C6) || defined(CONFIG_IDF_TARGET_ESP32H2) ||                  \
-    defined(CONFIG_IDF_TARGET_ESP32C5) || defined(CONFIG_IDF_TARGET_ESP32C61)
-    r.type2.channel = sample.channel & 0xFU;
-    r.type2.data = sample.raw & 0xFFFU;
-#else
-    r.type2.unit = sample.unit & 0x1U;
-    r.type2.channel = sample.channel & 0xFU;
-    r.type2.data = sample.raw & 0xFFFU;
-#endif
-    static_cast<void>(std::memcpy(out.data(), &r, sizeof(r)));
+    uint32_t v = (uint32_t{sample.raw} & kDataMask) |
+                 ((uint32_t{sample.channel} & kChannelMask) << kChannelShift);
+    if (kUnitShift != 0U) {
+      v |= (uint32_t{sample.unit} & 1U) << kUnitShift;
+    }
+    for (uint8_t& byte : out) {
+      byte = static_cast<uint8_t>(v & 0xFFU);
+      v >>= 8U;
+    }
   }
   return ok;
 }
-
-// NOLINTEND(cppcoreguidelines-pro-type-union-access)
 
 } // namespace kb::port::esp32::sdk

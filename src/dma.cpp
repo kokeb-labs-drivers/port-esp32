@@ -25,7 +25,6 @@ void EspCacheOps::Invalidate(std::span<std::byte> range) noexcept {
   }
 }
 
-// NOLINTNEXTLINE(readability-convert-member-functions-to-static): a kb::dma::CacheOps member
 void EspCacheOps::Barrier() noexcept {
   sdk::MemoryBarrier();
 }

@@ -125,7 +125,8 @@ deviations:
     reason: >-
       kb-core's cache hook kb::dma::CacheOps::Clean takes its range as std::span<const std::byte>, because a clean only
       writes dirty cache lines back to memory and changes no byte of the buffer; ESP-IDF's esp_cache_msync takes
-      `void*` for both directions. The const is removed once to pass the address.
+      `void*` for both directions. The const is removed once to pass the address (clang-tidy
+      cppcoreguidelines-pro-type-const-cast).
     mitigation: >-
       One conversion, in CacheWriteBack, of a range that kb::dma::Buffer hands over (whole cache lines of one buffer the
       port owns), passed only with ESP_CACHE_MSYNC_FLAG_DIR_C2M, under which esp_cache_msync writes nothing through

@@ -64,8 +64,7 @@ int32_t SpiDmaCore::Begin(std::span<std::byte> memory, kb::dma::Direction dir,
              : sdk::SpiQueue(device_.slot_, std::span<const std::byte>{}, data, used);
 }
 
-// NOLINTNEXTLINE(readability-make-member-function-const): it ends a transaction of the device
-int32_t SpiDmaCore::Result(uint32_t wait_ms, uint32_t& flags) noexcept {
+int32_t SpiDmaCore::Result(uint32_t wait_ms, uint32_t& flags) const noexcept {
   return sdk::SpiQueueResult(device_.slot_, wait_ms, flags);
 }
 

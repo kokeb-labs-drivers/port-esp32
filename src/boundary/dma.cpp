@@ -26,10 +26,10 @@ bool DmaMemoryUsable(std::span<const uint8_t> memory) noexcept {
 }
 
 int32_t CacheWriteBack(std::span<const std::byte> range) noexcept {
-  // esp_cache_msync takes `void*` for both directions; C2M only writes cache lines back to memory.
-  // codeql::misra_deviation_next_line(DEV-006)
-  void* const base =
-      const_cast<std::byte*>(range.data()); // NOLINT(cppcoreguidelines-pro-type-const-cast)
+  // esp_cache_msync takes `void*` for both directions; C2M only writes cache lines back to memory,
+  // nothing is written through the pointer.
+  // NOLINTNEXTLINE(cppcoreguidelines-pro-type-const-cast): DEV-006, the SDK takes void* for a clean
+  void* const base = const_cast<std::byte*>(range.data());
   return esp_cache_msync(base, range.size(), ESP_CACHE_MSYNC_FLAG_DIR_C2M);
 }
 
