@@ -336,6 +336,25 @@
   
   
     <li class="md-tabs__item">
+      <a href="../../dma/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  DMA
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
       <a href="../../error-mapping/" class="md-tabs__link">
         
   
@@ -994,6 +1013,33 @@
   
   
     <li class="md-nav__item">
+      <a href="../../dma/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    DMA
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../../error-mapping/" class="md-nav__link">
         
   
@@ -1085,6 +1131,8 @@
       
         
           
+        
+      
         
       
     
@@ -1330,7 +1378,7 @@ satisfies <code>kb::iface::SpiDevice</code> and <code>kb::iface::SpiClockControl
 <details class="kb-figure-desc">
 <summary>Figure description and sources</summary>
 <p>The driver's Transfer call reaches the SpiDevice, which takes the lock of its SPI host within its timeout; with DMA the frame is first copied into the host's own DMA buffer. ESP-IDF's spi_master starts one polling transaction: it drives chip select low, clocks every byte to the Device and reads its reply, then raises chip select. The SpiDevice waits for the end of the transaction for the frame's wire time plus the timeout, and once more; a transaction that never ends marks the host failed. The result returns to the driver as a kb::Status.</p>
-<p>Drawn from: <a href="../../model/spi-transfer.seq.yml"><code>docs/model/spi-transfer.seq.yml</code></a>; <a href="https://github.com/kokeb-labs-drivers/port-esp32/blob/ff01af770e54d7cdee01da00cb73b96414b3f192/inc/kb/port/esp32/spi.hpp"><code>inc/kb/port/esp32/spi.hpp</code></a>; <a href="https://github.com/kokeb-labs-drivers/port-esp32/blob/ff01af770e54d7cdee01da00cb73b96414b3f192/src/boundary/spi.cpp"><code>src/boundary/spi.cpp</code></a>; <a href="https://github.com/kokeb-labs-drivers/port-esp32/blob/ff01af770e54d7cdee01da00cb73b96414b3f192/src/spi.cpp"><code>src/spi.cpp</code></a>.</p>
+<p>Drawn from: <a href="../../model/spi-transfer.seq.yml"><code>docs/model/spi-transfer.seq.yml</code></a>; <a href="https://github.com/kokeb-labs-drivers/port-esp32/blob/5f14b9f7e459f07bd5cda078d22a56bfbb005a1f/inc/kb/port/esp32/spi.hpp"><code>inc/kb/port/esp32/spi.hpp</code></a>; <a href="https://github.com/kokeb-labs-drivers/port-esp32/blob/5f14b9f7e459f07bd5cda078d22a56bfbb005a1f/src/boundary/spi.cpp"><code>src/boundary/spi.cpp</code></a>; <a href="https://github.com/kokeb-labs-drivers/port-esp32/blob/5f14b9f7e459f07bd5cda078d22a56bfbb005a1f/src/spi.cpp"><code>src/spi.cpp</code></a>.</p>
 </details>
 <p>A frame is one transaction, so the hardware holds chip select for the whole frame. A read-only frame (<code>tx</code> empty)
 clocks zeros from an internal, word-aligned zero buffer of 64 bytes. The sampling point is ESP-IDF's default
@@ -1365,7 +1413,7 @@ transactions would need, so frames are never split.</p>
 </tr>
 <tr>
 <td>DMA</td>
-<td>Off by default: the CPU copies the data through the FIFO, buffers may be anywhere. With <code>dma</code> every frame is copied into and out of the host's DMA buffer under the bus lock, so any caller buffer works (stack, unaligned, odd lengths), the port allocates nothing per transfer, and the DMA's rounding of receive lengths up to whole words (ESP-IDF rounds every receive descriptor; ESP32 notes: "DMA may overwrite the data in the unaligned part") only ever writes port memory. Memory: twice <code>dma_buffer_bytes</code> per DMA host, rounded up to the alignment. On a chip whose internal RAM sits behind a cache (ESP32-P4, 64-byte lines) ESP-IDF still bounces a receive whose length is not a whole number of cache lines through a heap block of its own, per transfer (<code>setup_dma_priv_buffer</code>); full-duplex receive cannot be longer than the frame, so the port cannot pad it. Frames sized in whole lines avoid it; a transient lack of heap there is reported as <code>Busy</code> (detail <code>ESP_ERR_NO_MEM</code>). On the ESP32-C3 and ESP32-H2, which have little RAM, set <code>dma_buffer_bytes</code> to the largest frame of the drivers on the host</td>
+<td>Off by default: the CPU copies the data through the FIFO, buffers may be anywhere. With <code>dma</code> every frame is copied into and out of the host's staging buffer under the bus lock, so any caller buffer works (stack, unaligned, odd lengths, PSRAM) and the DMA's rounding of receive lengths up to whole words only ever writes port memory. The staging buffer is the board's static <code>SpiStaging&lt;N&gt;</code> (<code>SpiBusConfig::staging</code>) or, without one, one block allocated in <code>EnsureReady()</code>; either is checked to be DMA-capable and aligned. Every DMA transaction carries <code>SPI_TRANS_DMA_BUFFER_ALIGN_MANUAL</code>, so ESP-IDF refuses instead of allocating: nothing is allocated per transfer. On the ESP32-P4 (internal RAM behind 64-byte cache lines) a DMA receive must be whole lines in length, a shorter one is refused with <code>InvalidArgument</code>. No free DMA channel: <code>Unsupported</code>, or with <code>dma_fallback</code> the FIFO path, reported by <code>Capabilities()</code> and <code>Health()</code>. Rules, regions and conformance: <a href="../../dma/">DMA</a></td>
 </tr>
 </tbody>
 </table>
@@ -1461,12 +1509,15 @@ hang on the SDK's lock. Restart the application to use the host again.</p>
 <p><code>tx</code> and <code>rx</code> must not overlap (the port clears <code>rx</code> before it reads <code>tx</code>).</p>
 <p>A <code>Timeout</code> frame was fully clocked: a driver that retries on <code>Timeout</code> repeats it, which matters for
 non-idempotent frames (an EEPROM write, a FIFO read, a motor command).</p>
-<p>With DMA, the transaction of a failed host still points at the host's DMA buffer, which the port keeps (it is
-freed only after <code>spi_bus_free</code> succeeds, which ESP-IDF refuses while the device is attached), so a late
-completion can only write port memory, never a caller's buffer that has since gone out of scope.</p>
+<p>With DMA, the transaction of a failed host still points at the host's staging buffer, which the port keeps held
+(<code>Health().quarantined</code>; an allocated one is freed only after <code>spi_bus_free</code> succeeds, which ESP-IDF refuses while
+the device is attached), so a late completion can only write port memory, never a caller's buffer that has since
+gone out of scope.</p>
 <h2 id="frame-limits-and-drivers">Frame limits and drivers<a class="headerlink" href="#frame-limits-and-drivers" title="Permanent link">&para;</a></h2>
-<p>Drivers can check the limit at build time: <code>kb::port::esp32::kSpiMaxFrameBytes</code> (64, without DMA) and
-<code>kSpiMaxDmaFrameBytes</code> (4092, the largest DMA buffer); <code>SpiBus::MaxFrameBytes()</code> gives the configured one.</p>
+<p>Drivers and bindings check the limit at build time: <code>kb::port::esp32::SpiLimits&lt;Target, Dma, StagingBytes&gt;::kBus</code> is a
+<code>kb::dma::BusLimits</code>, and <code>kb::dma::RequireBusCarries&lt;Bus, Driver::kMaxFrameBytes&gt;()</code> fails the build when the bus
+cannot carry the driver's largest frame (<code>kSpiMaxFrameBytes</code>, 64, without DMA; the staging frame, at most
+<code>kSpiMaxDmaFrameBytes</code> 4092, with it). <code>SpiBus::MaxFrameBytes()</code> gives the configured one at run time.</p>
 <table>
 <thead>
 <tr>
@@ -1504,7 +1555,7 @@ completion can only write port memory, never a caller's buffer that has since go
 <tr>
 <td>bmp581 (SPI)</td>
 <td>97</td>
-<td>Needs <code>dma = true</code> (the DMA buffer takes its member buffers as they are)</td>
+<td>Needs <code>dma = true</code> (the staging buffer takes its member buffers as they are)</td>
 </tr>
 <tr>
 <td>bno08x (SPI)</td>

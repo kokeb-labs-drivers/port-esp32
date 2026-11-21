@@ -334,6 +334,25 @@
   
   
     <li class="md-tabs__item">
+      <a href="../dma/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  DMA
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
       <a href="../error-mapping/" class="md-tabs__link">
         
   
@@ -633,6 +652,33 @@
   
   
     <li class="md-nav__item">
+      <a href="../dma/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    DMA
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../error-mapping/" class="md-nav__link">
         
   
@@ -728,6 +774,8 @@
           
         
       
+        
+      
     
     
     
@@ -746,7 +794,7 @@
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_8" checked>
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_9" checked>
         
           
           <div class="md-nav__link md-nav__container">
@@ -768,14 +816,14 @@
             </a>
             
               
-              <label class="md-nav__link " for="__nav_8" id="__nav_8_label" tabindex="">
+              <label class="md-nav__link " for="__nav_9" id="__nav_9_label" tabindex="">
                 <span class="md-nav__icon md-icon"></span>
               </label>
             
           </div>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_8_label" aria-expanded="true">
-          <label class="md-nav__title" for="__nav_8">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_9_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_9">
             <span class="md-nav__icon md-icon"></span>
             
   
@@ -966,6 +1014,176 @@
 
               
             
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+          
+          
+        
+      
+    
+    
+      
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_9_5" >
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../assurance/bench/" class="md-nav__link ">
+              
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    DMA bench kit
+  
+
+    
+  </span>
+  
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_9_5" id="__nav_9_5_label" tabindex="">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_9_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_9_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    DMA bench kit
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../assurance/bench/procedure-esp32/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Procedure
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../assurance/bench/evidence-form/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Evidence form
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../assurance/bench/runs/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Runs
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
               
             
           </ul>
@@ -1171,6 +1389,16 @@ behaviour.</p>
 </tr>
 <tr>
 <td>SPI</td>
+<td><code>setup_dma_priv_buffer</code> allocates a DMA-capable copy per transaction for a buffer that is not DMA-capable or not aligned (and, on a cached chip, a receive not in whole cache lines)</td>
+<td>Staging buffers; <code>SPI_TRANS_DMA_BUFFER_ALIGN_MANUAL</code> on every DMA transaction makes ESP-IDF refuse instead (<a href="../dma/">DMA</a>)</td>
+</tr>
+<tr>
+<td>ADC</td>
+<td>The continuous pool-overflow callback gets no event data; the driver reuses its five frame buffers; <code>adc_continuous_read</code> rounds its millisecond timeout down to ticks</td>
+<td>A separate overflow callback; the frame copied in the callback; the pool read only with timeout 0 (<a href="../dma/">DMA</a>)</td>
+</tr>
+<tr>
+<td>SPI</td>
 <td><code>spi_device_polling_end</code> returns <code>ESP_ERR_TIMEOUT</code> with the transaction in flight, the SDK bus lock held and the device not removable; it keeps a pointer to the transaction descriptor</td>
 <td>The wait is sized to the wire time; a second wait; then the host is marked failed; descriptors live in a static table</td>
 </tr>
@@ -1231,7 +1459,9 @@ fetch it, and kb-core has no release tag yet. The port therefore carries an <str
 it builds against in <code>third_party/kb-core</code>, at the commit recorded in <code>third_party/kb-core.lock</code> with the ref it
 was taken from and the SHA-256 of every file:</p>
 <ul>
-<li><code>tools/kb_core_snapshot.py --update &lt;kb-core checkout&gt;</code> is the only writer. It refuses a checkout with local
+<li><code>tools/kb_core_snapshot.py --update &lt;kb-core checkout&gt;</code> is the only writer. It copies the paths kb-core's
+  <code>tools/layout/layout.py vendor</code> lists (what a vendoring consumer needs), or its own list for an older checkout.
+  It refuses a checkout with local
   changes in the copied paths, and a commit that is neither tagged nor on kb-core's <code>main</code> branch, so the lock
   never names a state that kb-core can delete (a pull-request branch);</li>
 <li><code>tools/kb_core_snapshot.py --check</code> and every CMake configure re-hash every file against the lock; a difference
@@ -1251,7 +1481,7 @@ was taken from and the SHA-256 of every file:</p>
 <tr>
 <td><code>main</code> (no release tag yet)</td>
 <td>see <code>third_party/kb-core.lock</code></td>
-<td><code>utils</code>, <code>rtos</code> (FreeRTOS backend on target, none backend on the host), <code>interfaces</code></td>
+<td><code>utils</code>, <code>rtos</code> (FreeRTOS backend on target, none backend on the host), <code>interfaces</code>, <code>dma</code> (and its host DMA-and-cache model for the conformance tests)</td>
 </tr>
 </tbody>
 </table>

@@ -334,6 +334,25 @@
   
   
     <li class="md-tabs__item">
+      <a href="../dma/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  DMA
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
       <a href="../error-mapping/" class="md-tabs__link">
         
   
@@ -633,6 +652,33 @@
   
   
     <li class="md-nav__item">
+      <a href="../dma/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    DMA
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../error-mapping/" class="md-nav__link">
         
   
@@ -728,6 +774,8 @@
           
         
       
+        
+      
     
     
     
@@ -746,7 +794,7 @@
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_8" checked>
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_9" checked>
         
           
           <div class="md-nav__link md-nav__container">
@@ -768,14 +816,14 @@
             </a>
             
               
-              <label class="md-nav__link " for="__nav_8" id="__nav_8_label" tabindex="">
+              <label class="md-nav__link " for="__nav_9" id="__nav_9_label" tabindex="">
                 <span class="md-nav__icon md-icon"></span>
               </label>
             
           </div>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_8_label" aria-expanded="true">
-          <label class="md-nav__title" for="__nav_8">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_9_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_9">
             <span class="md-nav__icon md-icon"></span>
             
   
@@ -895,6 +943,17 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#dma-conformance" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        DMA conformance
+      
+    </span>
+  </a>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -960,6 +1019,176 @@
 
               
             
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+          
+          
+        
+      
+    
+    
+      
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_9_5" >
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../assurance/bench/" class="md-nav__link ">
+              
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    DMA bench kit
+  
+
+    
+  </span>
+  
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_9_5" id="__nav_9_5_label" tabindex="">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_9_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_9_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    DMA bench kit
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../assurance/bench/procedure-esp32/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Procedure
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../assurance/bench/evidence-form/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Evidence form
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../assurance/bench/runs/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Runs
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
               
             
           </ul>
@@ -1060,6 +1289,17 @@
     <span class="md-ellipsis">
       
         Not verified here
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#dma-conformance" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        DMA conformance
       
     </span>
   </a>
@@ -1220,6 +1460,12 @@ whose wait ends because a running call returned is tested with two threads that 
 <p>The port has not been run on hardware by this repository's CI: the host tests prove the logic and the SDK call
 sequence against fakes, and the ESP-IDF builds prove it compiles and links for each target. Timing on silicon
 (clock stretching limits, bus recovery on a real stuck slave, TWAI bus-off recovery) needs a bench run per target.</p>
+<h2 id="dma-conformance">DMA conformance<a class="headerlink" href="#dma-conformance" title="Permanent link">&para;</a></h2>
+<p><code>kb_port_esp32_conformance</code> runs kb-core's DMA conformance suite (cases T1 to T18) against the port's real classes,
+with their boundary calls linked against kb-core's host DMA-and-cache model (<code>tests/dma_model/</code>), and prints one
+<code>CONFORMANCE &lt;case&gt; &lt;variant&gt; PASS|FAIL</code> line per case and variant. The results and how each case applies to the ESP32
+are in <a href="../dma/#conformance">DMA</a>; the bench apps for the same paths on real boards are in <code>tests/target/dma/</code>
+(<a href="../assurance/bench/">bench kit</a>), built in CI for esp32c6, esp32s3 and esp32.</p>
 
 
 

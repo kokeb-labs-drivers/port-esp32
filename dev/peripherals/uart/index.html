@@ -336,6 +336,25 @@
   
   
     <li class="md-tabs__item">
+      <a href="../../dma/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  DMA
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
       <a href="../../error-mapping/" class="md-tabs__link">
         
   
@@ -961,6 +980,33 @@
   
   
     <li class="md-nav__item">
+      <a href="../../dma/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    DMA
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../../error-mapping/" class="md-nav__link">
         
   
@@ -1052,6 +1098,8 @@
       
         
           
+        
+      
         
       
     
@@ -1272,7 +1320,7 @@
 <details class="kb-figure-desc">
 <summary>Figure description and sources</summary>
 <p>The driver's Write call reaches the Uart, which takes its writer lock and hands the bytes to ESP-IDF's uart driver with uart_tx_chars, again after eight character times until every byte is in the FIFO, and the bytes go out on TX to the Device. The Device's reply arrives on RX into the uart driver's ring buffer. The driver's Read call takes the reader lock, reports any pending framing, parity or overflow event first, waits up to its timeout for one byte and then takes the bytes already buffered without waiting; the count returns to the driver.</p>
-<p>Drawn from: <a href="../../model/uart-write-read.seq.yml"><code>docs/model/uart-write-read.seq.yml</code></a>; <a href="https://github.com/kokeb-labs-drivers/port-esp32/blob/ff01af770e54d7cdee01da00cb73b96414b3f192/inc/kb/port/esp32/uart.hpp"><code>inc/kb/port/esp32/uart.hpp</code></a>; <a href="https://github.com/kokeb-labs-drivers/port-esp32/blob/ff01af770e54d7cdee01da00cb73b96414b3f192/src/boundary/uart.cpp"><code>src/boundary/uart.cpp</code></a>; <a href="https://github.com/kokeb-labs-drivers/port-esp32/blob/ff01af770e54d7cdee01da00cb73b96414b3f192/src/uart.cpp"><code>src/uart.cpp</code></a>.</p>
+<p>Drawn from: <a href="../../model/uart-write-read.seq.yml"><code>docs/model/uart-write-read.seq.yml</code></a>; <a href="https://github.com/kokeb-labs-drivers/port-esp32/blob/5f14b9f7e459f07bd5cda078d22a56bfbb005a1f/inc/kb/port/esp32/uart.hpp"><code>inc/kb/port/esp32/uart.hpp</code></a>; <a href="https://github.com/kokeb-labs-drivers/port-esp32/blob/5f14b9f7e459f07bd5cda078d22a56bfbb005a1f/src/boundary/uart.cpp"><code>src/boundary/uart.cpp</code></a>; <a href="https://github.com/kokeb-labs-drivers/port-esp32/blob/5f14b9f7e459f07bd5cda078d22a56bfbb005a1f/src/uart.cpp"><code>src/uart.cpp</code></a>.</p>
 </details>
 <h2 id="pins-and-clock">Pins and clock<a class="headerlink" href="#pins-and-clock" title="Permanent link">&para;</a></h2>
 <table>

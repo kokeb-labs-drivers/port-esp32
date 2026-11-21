@@ -13,7 +13,7 @@
         <link rel="canonical" href="https://kokeb-labs-drivers.github.io/port-esp32/latest/changelog/">
       
       
-        <link rel="prev" href="../diagrams/">
+        <link rel="prev" href="../assurance/bench/runs/">
       
       
       
@@ -332,6 +332,25 @@
   
   
     <li class="md-tabs__item">
+      <a href="../dma/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  DMA
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
       <a href="../error-mapping/" class="md-tabs__link">
         
   
@@ -631,6 +650,33 @@
   
   
     <li class="md-nav__item">
+      <a href="../dma/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    DMA
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../error-mapping/" class="md-nav__link">
         
   
@@ -722,6 +768,8 @@
       
         
           
+        
+      
         
       
     
@@ -1106,12 +1154,41 @@
   models in <code>docs/model/</code> (light and dark SVG, readable on a phone).</li>
 <li>CI path filter: a pull request that changes only documentation runs only the docs, handbook and DCO checks; the
   gate allows the code jobs to be skipped only then. The docs publish only from main and <code>v*</code> tags.</li>
+<li>DMA (docs/dma.md), on kb-core's <code>kb::dma</code>: <code>dma.hpp</code> (the regions <code>InternalRam</code>, <code>InternalRamL1</code>, <code>Psram&lt;L&gt;</code>, the
+  DMA masters, <code>SpiLimits&lt;Target, Dma, StagingBytes&gt;</code> as <code>kb::dma::BusLimits</code>, the static <code>SpiStaging&lt;N&gt;</code>,
+  <code>kInterruptLimits</code> and <code>InterruptLevelOf</code>, <code>RequireSpiHalfDuplexPhases</code>, <code>EspCacheOps</code> over <code>esp_cache_msync</code>);
+  <code>spi_dma.hpp</code> (<code>SpiDmaChannel&lt;Region&gt;</code>: zero-copy SPI DMA of a <code>kb::dma::Buffer</code> through a <code>kb::dma::Lease</code>, with
+  <code>Start</code>, <code>Poll</code>, <code>Cancel</code> and <code>Recover</code>); <code>adc_stream.hpp</code> (<code>AdcStream&lt;Frame, Frames&gt;</code> and <code>AdcStreamDefault</code>: ADC
+  continuous mode into a <code>kb::dma::Stream</code>, the frame copied in the conversion-done interrupt with its time, the pool
+  overflow a separate counted signal, a start-time shape check with a reported one-shot fallback, an IRAM-safe
+  interrupt path placed by the component's <code>linker.lf</code>).</li>
+<li>SPI: <code>SpiBusConfig::staging</code> (a board's static staging buffer, checked at start), <code>interrupt_level</code> (the ESP-IDF
+  level from the board's stream assignment), <code>dma_fallback</code> (no free DMA channel: run without DMA, reported);
+  <code>SpiBus::Capabilities()</code>, <code>Health()</code>, <code>DmaActive()</code>.</li>
+<li>The kb-core DMA conformance suite, T1 to T18, run against the port's classes linked against kb-core's host
+  DMA-and-cache model (<code>kb_port_esp32_conformance</code>, <code>tests/dma_model/</code>).</li>
+<li>The DMA bench kit: the apps <code>dma_spi_bench</code> and <code>dma_adc_bench</code> in <code>tests/target/dma/</code> (built in CI for esp32c6,
+  esp32s3 and esp32), the procedure for an ESP32-C6, an ESP32-S3 and an ESP32 devkit with wiring figures, the evidence
+  form and the runs folder (<code>docs/assurance/bench/</code>).</li>
 </ul>
 <h3 id="changed">Changed<a class="headerlink" href="#changed" title="Permanent link">&para;</a></h3>
 <ul>
-<li>The port stands alone: the pcal9555, tmc5160 and bno08x driver submodules, <code>drivers/drivers.lock.yml</code>, the pin-hygiene
+<li>SPI with DMA: every DMA transaction carries <code>SPI_TRANS_DMA_BUFFER_ALIGN_MANUAL</code>, so ESP-IDF refuses instead of
+  allocating a bounce buffer; nothing is allocated per transfer on any target. Breaking on the ESP32-P4: a DMA
+  receive whose length is not a whole number of 64-byte cache lines is refused with <code>InvalidArgument</code> (before, ESP-IDF
+  bounced it through the heap per transfer).</li>
+<li>SPI with DMA and no free DMA channel: <code>EnsureReady()</code> returns <code>Unsupported</code> (was <code>NoDevice</code>).</li>
+<li>The staging buffer of a host whose transaction never ended stays held until the host is torn down, and is counted
+  in <code>Health().quarantined</code>.</li>
+<li>
+<p>The kb-core copy adds the <code>dma</code> part and its host model (<code>components/lib/dma/{CMakeLists.txt,inc,host}</code>);
+  <code>tools/kb_core_snapshot.py</code> copies what kb-core's <code>tools/layout/layout.py vendor</code> lists.</p>
+</li>
+<li>
+<p>The port stands alone: the pcal9555, tmc5160 and bno08x driver submodules, <code>drivers/drivers.lock.yml</code>, the pin-hygiene
   workflow and the driver examples are removed; the one example is <code>port_selftest</code> (it also brings up the I2C and SPI
-  buses). Chip drivers are bound through the port in their own repositories.</li>
+  buses). Chip drivers are bound through the port in their own repositories.</p>
+</li>
 <li>The kb-core copy follows kb-core's <code>components/</code> layout (kb-core <code>main</code> at 2976aaf: <code>lib/</code> -&gt; <code>components/lib/</code>,
   the host RTOS backend in <code>components/ports/host/</code>, plus <code>tools/layout/paths.yml</code>, which kb-core's CMake reads); 65 files
   in the lock.</li>
@@ -1225,7 +1302,7 @@
       <nav class="md-footer__inner md-grid" aria-label="Footer" >
         
           
-          <a href="../diagrams/" class="md-footer__link md-footer__link--prev" aria-label="Previous: Figures">
+          <a href="../assurance/bench/runs/" class="md-footer__link md-footer__link--prev" aria-label="Previous: Runs">
             <div class="md-footer__button md-icon">
               
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
@@ -1235,7 +1312,7 @@
                 Previous
               </span>
               <div class="md-ellipsis">
-                Figures
+                Runs
               </div>
             </div>
           </a>

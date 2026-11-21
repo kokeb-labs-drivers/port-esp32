@@ -16,7 +16,7 @@
         <link rel="prev" href="../soup/">
       
       
-        <link rel="next" href="../changelog/">
+        <link rel="next" href="../assurance/bench/">
       
       
         
@@ -334,6 +334,25 @@
   
   
     <li class="md-tabs__item">
+      <a href="../dma/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  DMA
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
       <a href="../error-mapping/" class="md-tabs__link">
         
   
@@ -633,6 +652,33 @@
   
   
     <li class="md-nav__item">
+      <a href="../dma/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    DMA
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../error-mapping/" class="md-nav__link">
         
   
@@ -728,6 +774,8 @@
           
         
       
+        
+      
     
     
     
@@ -746,7 +794,7 @@
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_8" checked>
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_9" checked>
         
           
           <div class="md-nav__link md-nav__container">
@@ -768,14 +816,14 @@
             </a>
             
               
-              <label class="md-nav__link md-nav__link--active" for="__nav_8" id="__nav_8_label" tabindex="">
+              <label class="md-nav__link md-nav__link--active" for="__nav_9" id="__nav_9_label" tabindex="">
                 <span class="md-nav__icon md-icon"></span>
               </label>
             
           </div>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_8_label" aria-expanded="true">
-          <label class="md-nav__title" for="__nav_8">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_9_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_9">
             <span class="md-nav__icon md-icon"></span>
             
   
@@ -869,6 +917,176 @@
 
               
             
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+          
+          
+        
+      
+    
+    
+      
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_9_5" >
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../assurance/bench/" class="md-nav__link ">
+              
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    DMA bench kit
+  
+
+    
+  </span>
+  
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_9_5" id="__nav_9_5_label" tabindex="">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_9_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_9_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    DMA bench kit
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../assurance/bench/procedure-esp32/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Procedure
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../assurance/bench/evidence-form/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Evidence form
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../assurance/bench/runs/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Runs
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
               
             
           </ul>
@@ -1026,15 +1244,15 @@ committed figure no longer matches the code. Each figure below lists the files i
 <details class="kb-figure-desc">
 <summary>Figure description and sources</summary>
 <p>The driver's Send call reaches the CanController, which hands the frame to ESP-IDF's TWAI driver with twai_transmit_v2, waiting up to the call's timeout for a transmit queue slot; Ok means queued. The TWAI controller then sends the frame to the Other node through the transceiver, by interrupt, and the Other node acknowledges it. A frame the Other node sends lands in the TWAI driver's receive queue, and the driver's Receive call takes it with twai_receive_v2 within its timeout. A bus-off controller answers BusError until Recover brings it back.</p>
-<p>Drawn from: <a href="../model/can-send-receive.seq.yml"><code>docs/model/can-send-receive.seq.yml</code></a>; <a href="https://github.com/kokeb-labs-drivers/port-esp32/blob/ff01af770e54d7cdee01da00cb73b96414b3f192/inc/kb/port/esp32/can.hpp"><code>inc/kb/port/esp32/can.hpp</code></a>; <a href="https://github.com/kokeb-labs-drivers/port-esp32/blob/ff01af770e54d7cdee01da00cb73b96414b3f192/src/boundary/can.cpp"><code>src/boundary/can.cpp</code></a>; <a href="https://github.com/kokeb-labs-drivers/port-esp32/blob/ff01af770e54d7cdee01da00cb73b96414b3f192/src/can.cpp"><code>src/can.cpp</code></a>.</p>
+<p>Drawn from: <a href="../model/can-send-receive.seq.yml"><code>docs/model/can-send-receive.seq.yml</code></a>; <a href="https://github.com/kokeb-labs-drivers/port-esp32/blob/5f14b9f7e459f07bd5cda078d22a56bfbb005a1f/inc/kb/port/esp32/can.hpp"><code>inc/kb/port/esp32/can.hpp</code></a>; <a href="https://github.com/kokeb-labs-drivers/port-esp32/blob/5f14b9f7e459f07bd5cda078d22a56bfbb005a1f/src/boundary/can.cpp"><code>src/boundary/can.cpp</code></a>; <a href="https://github.com/kokeb-labs-drivers/port-esp32/blob/5f14b9f7e459f07bd5cda078d22a56bfbb005a1f/src/can.cpp"><code>src/can.cpp</code></a>.</p>
 </details>
 <p>Hardware description: <a href="../model/can-send-receive.seq.yml"><code>docs/model/can-send-receive.seq.yml</code></a></p>
 <p>Drawn from:</p>
 <ul>
 <li><a href="../model/can-send-receive.seq.yml"><code>docs/model/can-send-receive.seq.yml</code></a></li>
-<li><a href="https://github.com/kokeb-labs-drivers/port-esp32/blob/ff01af770e54d7cdee01da00cb73b96414b3f192/inc/kb/port/esp32/can.hpp"><code>inc/kb/port/esp32/can.hpp</code></a></li>
-<li><a href="https://github.com/kokeb-labs-drivers/port-esp32/blob/ff01af770e54d7cdee01da00cb73b96414b3f192/src/boundary/can.cpp"><code>src/boundary/can.cpp</code></a></li>
-<li><a href="https://github.com/kokeb-labs-drivers/port-esp32/blob/ff01af770e54d7cdee01da00cb73b96414b3f192/src/can.cpp"><code>src/can.cpp</code></a></li>
+<li><a href="https://github.com/kokeb-labs-drivers/port-esp32/blob/5f14b9f7e459f07bd5cda078d22a56bfbb005a1f/inc/kb/port/esp32/can.hpp"><code>inc/kb/port/esp32/can.hpp</code></a></li>
+<li><a href="https://github.com/kokeb-labs-drivers/port-esp32/blob/5f14b9f7e459f07bd5cda078d22a56bfbb005a1f/src/boundary/can.cpp"><code>src/boundary/can.cpp</code></a></li>
+<li><a href="https://github.com/kokeb-labs-drivers/port-esp32/blob/5f14b9f7e459f07bd5cda078d22a56bfbb005a1f/src/can.cpp"><code>src/can.cpp</code></a></li>
 </ul>
 <h2 id="one-i2c-register-read">One I2C register read<a class="headerlink" href="#one-i2c-register-read" title="Permanent link">&para;</a></h2>
 <figure class="kb-figure">
@@ -1045,15 +1263,15 @@ committed figure no longer matches the code. Each figure below lists the files i
 <details class="kb-figure-desc">
 <summary>Figure description and sources</summary>
 <p>The driver's WriteRead call reaches the I2cController, which takes its lock within the call's timeout and, for a new address, moves its one device handle to it without bus traffic. ESP-IDF's i2c_master sends START, the address with the write bit and the register bytes to the Device, then a repeated START and the address with the read bit, reads the reply and ends with STOP. The I2cController classifies the esp_err_t by the time the transfer took, runs the bus recovery when SDA or SCL stays low, and returns a kb::Status to the driver.</p>
-<p>Drawn from: <a href="../model/i2c-write-read.seq.yml"><code>docs/model/i2c-write-read.seq.yml</code></a>; <a href="https://github.com/kokeb-labs-drivers/port-esp32/blob/ff01af770e54d7cdee01da00cb73b96414b3f192/inc/kb/port/esp32/i2c.hpp"><code>inc/kb/port/esp32/i2c.hpp</code></a>; <a href="https://github.com/kokeb-labs-drivers/port-esp32/blob/ff01af770e54d7cdee01da00cb73b96414b3f192/src/boundary/i2c.cpp"><code>src/boundary/i2c.cpp</code></a>; <a href="https://github.com/kokeb-labs-drivers/port-esp32/blob/ff01af770e54d7cdee01da00cb73b96414b3f192/src/i2c.cpp"><code>src/i2c.cpp</code></a>.</p>
+<p>Drawn from: <a href="../model/i2c-write-read.seq.yml"><code>docs/model/i2c-write-read.seq.yml</code></a>; <a href="https://github.com/kokeb-labs-drivers/port-esp32/blob/5f14b9f7e459f07bd5cda078d22a56bfbb005a1f/inc/kb/port/esp32/i2c.hpp"><code>inc/kb/port/esp32/i2c.hpp</code></a>; <a href="https://github.com/kokeb-labs-drivers/port-esp32/blob/5f14b9f7e459f07bd5cda078d22a56bfbb005a1f/src/boundary/i2c.cpp"><code>src/boundary/i2c.cpp</code></a>; <a href="https://github.com/kokeb-labs-drivers/port-esp32/blob/5f14b9f7e459f07bd5cda078d22a56bfbb005a1f/src/i2c.cpp"><code>src/i2c.cpp</code></a>.</p>
 </details>
 <p>Hardware description: <a href="../model/i2c-write-read.seq.yml"><code>docs/model/i2c-write-read.seq.yml</code></a></p>
 <p>Drawn from:</p>
 <ul>
 <li><a href="../model/i2c-write-read.seq.yml"><code>docs/model/i2c-write-read.seq.yml</code></a></li>
-<li><a href="https://github.com/kokeb-labs-drivers/port-esp32/blob/ff01af770e54d7cdee01da00cb73b96414b3f192/inc/kb/port/esp32/i2c.hpp"><code>inc/kb/port/esp32/i2c.hpp</code></a></li>
-<li><a href="https://github.com/kokeb-labs-drivers/port-esp32/blob/ff01af770e54d7cdee01da00cb73b96414b3f192/src/boundary/i2c.cpp"><code>src/boundary/i2c.cpp</code></a></li>
-<li><a href="https://github.com/kokeb-labs-drivers/port-esp32/blob/ff01af770e54d7cdee01da00cb73b96414b3f192/src/i2c.cpp"><code>src/i2c.cpp</code></a></li>
+<li><a href="https://github.com/kokeb-labs-drivers/port-esp32/blob/5f14b9f7e459f07bd5cda078d22a56bfbb005a1f/inc/kb/port/esp32/i2c.hpp"><code>inc/kb/port/esp32/i2c.hpp</code></a></li>
+<li><a href="https://github.com/kokeb-labs-drivers/port-esp32/blob/5f14b9f7e459f07bd5cda078d22a56bfbb005a1f/src/boundary/i2c.cpp"><code>src/boundary/i2c.cpp</code></a></li>
+<li><a href="https://github.com/kokeb-labs-drivers/port-esp32/blob/5f14b9f7e459f07bd5cda078d22a56bfbb005a1f/src/i2c.cpp"><code>src/i2c.cpp</code></a></li>
 </ul>
 <h2 id="contracts-on-the-esp32-port">Contracts on the ESP32 port<a class="headerlink" href="#contracts-on-the-esp32-port" title="Permanent link">&para;</a></h2>
 <figure class="kb-figure">
@@ -1064,22 +1282,22 @@ committed figure no longer matches the code. Each figure below lists the files i
 <details class="kb-figure-desc">
 <summary>Figure description and sources</summary>
 <p>Rows are the peripherals I2C, SPI, UART, CAN, ADC, PWM, GPIO, Clock and delay, Log and Pulse output; the columns are the base contract of the peripheral and its extra contracts. Native means the contract maps onto the ESP-IDF driver named in the cell; adapted means the port adds its own logic to meet the contract, such as telling a NACK from a timeout by the elapsed time or adding the SPI device again for a new clock. Planned marks a contract kb-core has not defined yet, and n/a one that the chip or kb-core does not have.</p>
-<p>Drawn from: <a href="../model/port-contracts.matrix.yml"><code>docs/model/port-contracts.matrix.yml</code></a>; <a href="https://github.com/kokeb-labs-drivers/port-esp32/blob/ff01af770e54d7cdee01da00cb73b96414b3f192/inc/kb/port/esp32/can.hpp"><code>inc/kb/port/esp32/can.hpp</code></a>; <a href="https://github.com/kokeb-labs-drivers/port-esp32/blob/ff01af770e54d7cdee01da00cb73b96414b3f192/inc/kb/port/esp32/gpio.hpp"><code>inc/kb/port/esp32/gpio.hpp</code></a>; <a href="https://github.com/kokeb-labs-drivers/port-esp32/blob/ff01af770e54d7cdee01da00cb73b96414b3f192/inc/kb/port/esp32/i2c.hpp"><code>inc/kb/port/esp32/i2c.hpp</code></a>; <a href="https://github.com/kokeb-labs-drivers/port-esp32/blob/ff01af770e54d7cdee01da00cb73b96414b3f192/inc/kb/port/esp32/log.hpp"><code>inc/kb/port/esp32/log.hpp</code></a>; <a href="https://github.com/kokeb-labs-drivers/port-esp32/blob/ff01af770e54d7cdee01da00cb73b96414b3f192/inc/kb/port/esp32/port.hpp"><code>inc/kb/port/esp32/port.hpp</code></a>; <a href="https://github.com/kokeb-labs-drivers/port-esp32/blob/ff01af770e54d7cdee01da00cb73b96414b3f192/inc/kb/port/esp32/spi.hpp"><code>inc/kb/port/esp32/spi.hpp</code></a>; <a href="https://github.com/kokeb-labs-drivers/port-esp32/blob/ff01af770e54d7cdee01da00cb73b96414b3f192/inc/kb/port/esp32/time.hpp"><code>inc/kb/port/esp32/time.hpp</code></a>; <a href="https://github.com/kokeb-labs-drivers/port-esp32/blob/ff01af770e54d7cdee01da00cb73b96414b3f192/inc/kb/port/esp32/uart.hpp"><code>inc/kb/port/esp32/uart.hpp</code></a>; <a href="https://github.com/kokeb-labs-drivers/port-esp32/blob/ff01af770e54d7cdee01da00cb73b96414b3f192/src/i2c.cpp"><code>src/i2c.cpp</code></a>; <a href="https://github.com/kokeb-labs-drivers/port-esp32/blob/ff01af770e54d7cdee01da00cb73b96414b3f192/src/spi.cpp"><code>src/spi.cpp</code></a>.</p>
+<p>Drawn from: <a href="../model/port-contracts.matrix.yml"><code>docs/model/port-contracts.matrix.yml</code></a>; <a href="https://github.com/kokeb-labs-drivers/port-esp32/blob/5f14b9f7e459f07bd5cda078d22a56bfbb005a1f/inc/kb/port/esp32/can.hpp"><code>inc/kb/port/esp32/can.hpp</code></a>; <a href="https://github.com/kokeb-labs-drivers/port-esp32/blob/5f14b9f7e459f07bd5cda078d22a56bfbb005a1f/inc/kb/port/esp32/gpio.hpp"><code>inc/kb/port/esp32/gpio.hpp</code></a>; <a href="https://github.com/kokeb-labs-drivers/port-esp32/blob/5f14b9f7e459f07bd5cda078d22a56bfbb005a1f/inc/kb/port/esp32/i2c.hpp"><code>inc/kb/port/esp32/i2c.hpp</code></a>; <a href="https://github.com/kokeb-labs-drivers/port-esp32/blob/5f14b9f7e459f07bd5cda078d22a56bfbb005a1f/inc/kb/port/esp32/log.hpp"><code>inc/kb/port/esp32/log.hpp</code></a>; <a href="https://github.com/kokeb-labs-drivers/port-esp32/blob/5f14b9f7e459f07bd5cda078d22a56bfbb005a1f/inc/kb/port/esp32/port.hpp"><code>inc/kb/port/esp32/port.hpp</code></a>; <a href="https://github.com/kokeb-labs-drivers/port-esp32/blob/5f14b9f7e459f07bd5cda078d22a56bfbb005a1f/inc/kb/port/esp32/spi.hpp"><code>inc/kb/port/esp32/spi.hpp</code></a>; <a href="https://github.com/kokeb-labs-drivers/port-esp32/blob/5f14b9f7e459f07bd5cda078d22a56bfbb005a1f/inc/kb/port/esp32/time.hpp"><code>inc/kb/port/esp32/time.hpp</code></a>; <a href="https://github.com/kokeb-labs-drivers/port-esp32/blob/5f14b9f7e459f07bd5cda078d22a56bfbb005a1f/inc/kb/port/esp32/uart.hpp"><code>inc/kb/port/esp32/uart.hpp</code></a>; <a href="https://github.com/kokeb-labs-drivers/port-esp32/blob/5f14b9f7e459f07bd5cda078d22a56bfbb005a1f/src/i2c.cpp"><code>src/i2c.cpp</code></a>; <a href="https://github.com/kokeb-labs-drivers/port-esp32/blob/5f14b9f7e459f07bd5cda078d22a56bfbb005a1f/src/spi.cpp"><code>src/spi.cpp</code></a>.</p>
 </details>
 <p>Hardware description: <a href="../model/port-contracts.matrix.yml"><code>docs/model/port-contracts.matrix.yml</code></a></p>
 <p>Drawn from:</p>
 <ul>
 <li><a href="../model/port-contracts.matrix.yml"><code>docs/model/port-contracts.matrix.yml</code></a></li>
-<li><a href="https://github.com/kokeb-labs-drivers/port-esp32/blob/ff01af770e54d7cdee01da00cb73b96414b3f192/inc/kb/port/esp32/can.hpp"><code>inc/kb/port/esp32/can.hpp</code></a></li>
-<li><a href="https://github.com/kokeb-labs-drivers/port-esp32/blob/ff01af770e54d7cdee01da00cb73b96414b3f192/inc/kb/port/esp32/gpio.hpp"><code>inc/kb/port/esp32/gpio.hpp</code></a></li>
-<li><a href="https://github.com/kokeb-labs-drivers/port-esp32/blob/ff01af770e54d7cdee01da00cb73b96414b3f192/inc/kb/port/esp32/i2c.hpp"><code>inc/kb/port/esp32/i2c.hpp</code></a></li>
-<li><a href="https://github.com/kokeb-labs-drivers/port-esp32/blob/ff01af770e54d7cdee01da00cb73b96414b3f192/inc/kb/port/esp32/log.hpp"><code>inc/kb/port/esp32/log.hpp</code></a></li>
-<li><a href="https://github.com/kokeb-labs-drivers/port-esp32/blob/ff01af770e54d7cdee01da00cb73b96414b3f192/inc/kb/port/esp32/port.hpp"><code>inc/kb/port/esp32/port.hpp</code></a></li>
-<li><a href="https://github.com/kokeb-labs-drivers/port-esp32/blob/ff01af770e54d7cdee01da00cb73b96414b3f192/inc/kb/port/esp32/spi.hpp"><code>inc/kb/port/esp32/spi.hpp</code></a></li>
-<li><a href="https://github.com/kokeb-labs-drivers/port-esp32/blob/ff01af770e54d7cdee01da00cb73b96414b3f192/inc/kb/port/esp32/time.hpp"><code>inc/kb/port/esp32/time.hpp</code></a></li>
-<li><a href="https://github.com/kokeb-labs-drivers/port-esp32/blob/ff01af770e54d7cdee01da00cb73b96414b3f192/inc/kb/port/esp32/uart.hpp"><code>inc/kb/port/esp32/uart.hpp</code></a></li>
-<li><a href="https://github.com/kokeb-labs-drivers/port-esp32/blob/ff01af770e54d7cdee01da00cb73b96414b3f192/src/i2c.cpp"><code>src/i2c.cpp</code></a></li>
-<li><a href="https://github.com/kokeb-labs-drivers/port-esp32/blob/ff01af770e54d7cdee01da00cb73b96414b3f192/src/spi.cpp"><code>src/spi.cpp</code></a></li>
+<li><a href="https://github.com/kokeb-labs-drivers/port-esp32/blob/5f14b9f7e459f07bd5cda078d22a56bfbb005a1f/inc/kb/port/esp32/can.hpp"><code>inc/kb/port/esp32/can.hpp</code></a></li>
+<li><a href="https://github.com/kokeb-labs-drivers/port-esp32/blob/5f14b9f7e459f07bd5cda078d22a56bfbb005a1f/inc/kb/port/esp32/gpio.hpp"><code>inc/kb/port/esp32/gpio.hpp</code></a></li>
+<li><a href="https://github.com/kokeb-labs-drivers/port-esp32/blob/5f14b9f7e459f07bd5cda078d22a56bfbb005a1f/inc/kb/port/esp32/i2c.hpp"><code>inc/kb/port/esp32/i2c.hpp</code></a></li>
+<li><a href="https://github.com/kokeb-labs-drivers/port-esp32/blob/5f14b9f7e459f07bd5cda078d22a56bfbb005a1f/inc/kb/port/esp32/log.hpp"><code>inc/kb/port/esp32/log.hpp</code></a></li>
+<li><a href="https://github.com/kokeb-labs-drivers/port-esp32/blob/5f14b9f7e459f07bd5cda078d22a56bfbb005a1f/inc/kb/port/esp32/port.hpp"><code>inc/kb/port/esp32/port.hpp</code></a></li>
+<li><a href="https://github.com/kokeb-labs-drivers/port-esp32/blob/5f14b9f7e459f07bd5cda078d22a56bfbb005a1f/inc/kb/port/esp32/spi.hpp"><code>inc/kb/port/esp32/spi.hpp</code></a></li>
+<li><a href="https://github.com/kokeb-labs-drivers/port-esp32/blob/5f14b9f7e459f07bd5cda078d22a56bfbb005a1f/inc/kb/port/esp32/time.hpp"><code>inc/kb/port/esp32/time.hpp</code></a></li>
+<li><a href="https://github.com/kokeb-labs-drivers/port-esp32/blob/5f14b9f7e459f07bd5cda078d22a56bfbb005a1f/inc/kb/port/esp32/uart.hpp"><code>inc/kb/port/esp32/uart.hpp</code></a></li>
+<li><a href="https://github.com/kokeb-labs-drivers/port-esp32/blob/5f14b9f7e459f07bd5cda078d22a56bfbb005a1f/src/i2c.cpp"><code>src/i2c.cpp</code></a></li>
+<li><a href="https://github.com/kokeb-labs-drivers/port-esp32/blob/5f14b9f7e459f07bd5cda078d22a56bfbb005a1f/src/spi.cpp"><code>src/spi.cpp</code></a></li>
 </ul>
 <h2 id="one-spi-frame">One SPI frame<a class="headerlink" href="#one-spi-frame" title="Permanent link">&para;</a></h2>
 <figure class="kb-figure">
@@ -1090,15 +1308,15 @@ committed figure no longer matches the code. Each figure below lists the files i
 <details class="kb-figure-desc">
 <summary>Figure description and sources</summary>
 <p>The driver's Transfer call reaches the SpiDevice, which takes the lock of its SPI host within its timeout; with DMA the frame is first copied into the host's own DMA buffer. ESP-IDF's spi_master starts one polling transaction: it drives chip select low, clocks every byte to the Device and reads its reply, then raises chip select. The SpiDevice waits for the end of the transaction for the frame's wire time plus the timeout, and once more; a transaction that never ends marks the host failed. The result returns to the driver as a kb::Status.</p>
-<p>Drawn from: <a href="../model/spi-transfer.seq.yml"><code>docs/model/spi-transfer.seq.yml</code></a>; <a href="https://github.com/kokeb-labs-drivers/port-esp32/blob/ff01af770e54d7cdee01da00cb73b96414b3f192/inc/kb/port/esp32/spi.hpp"><code>inc/kb/port/esp32/spi.hpp</code></a>; <a href="https://github.com/kokeb-labs-drivers/port-esp32/blob/ff01af770e54d7cdee01da00cb73b96414b3f192/src/boundary/spi.cpp"><code>src/boundary/spi.cpp</code></a>; <a href="https://github.com/kokeb-labs-drivers/port-esp32/blob/ff01af770e54d7cdee01da00cb73b96414b3f192/src/spi.cpp"><code>src/spi.cpp</code></a>.</p>
+<p>Drawn from: <a href="../model/spi-transfer.seq.yml"><code>docs/model/spi-transfer.seq.yml</code></a>; <a href="https://github.com/kokeb-labs-drivers/port-esp32/blob/5f14b9f7e459f07bd5cda078d22a56bfbb005a1f/inc/kb/port/esp32/spi.hpp"><code>inc/kb/port/esp32/spi.hpp</code></a>; <a href="https://github.com/kokeb-labs-drivers/port-esp32/blob/5f14b9f7e459f07bd5cda078d22a56bfbb005a1f/src/boundary/spi.cpp"><code>src/boundary/spi.cpp</code></a>; <a href="https://github.com/kokeb-labs-drivers/port-esp32/blob/5f14b9f7e459f07bd5cda078d22a56bfbb005a1f/src/spi.cpp"><code>src/spi.cpp</code></a>.</p>
 </details>
 <p>Hardware description: <a href="../model/spi-transfer.seq.yml"><code>docs/model/spi-transfer.seq.yml</code></a></p>
 <p>Drawn from:</p>
 <ul>
 <li><a href="../model/spi-transfer.seq.yml"><code>docs/model/spi-transfer.seq.yml</code></a></li>
-<li><a href="https://github.com/kokeb-labs-drivers/port-esp32/blob/ff01af770e54d7cdee01da00cb73b96414b3f192/inc/kb/port/esp32/spi.hpp"><code>inc/kb/port/esp32/spi.hpp</code></a></li>
-<li><a href="https://github.com/kokeb-labs-drivers/port-esp32/blob/ff01af770e54d7cdee01da00cb73b96414b3f192/src/boundary/spi.cpp"><code>src/boundary/spi.cpp</code></a></li>
-<li><a href="https://github.com/kokeb-labs-drivers/port-esp32/blob/ff01af770e54d7cdee01da00cb73b96414b3f192/src/spi.cpp"><code>src/spi.cpp</code></a></li>
+<li><a href="https://github.com/kokeb-labs-drivers/port-esp32/blob/5f14b9f7e459f07bd5cda078d22a56bfbb005a1f/inc/kb/port/esp32/spi.hpp"><code>inc/kb/port/esp32/spi.hpp</code></a></li>
+<li><a href="https://github.com/kokeb-labs-drivers/port-esp32/blob/5f14b9f7e459f07bd5cda078d22a56bfbb005a1f/src/boundary/spi.cpp"><code>src/boundary/spi.cpp</code></a></li>
+<li><a href="https://github.com/kokeb-labs-drivers/port-esp32/blob/5f14b9f7e459f07bd5cda078d22a56bfbb005a1f/src/spi.cpp"><code>src/spi.cpp</code></a></li>
 </ul>
 <h2 id="a-uart-request-and-reply">A UART request and reply<a class="headerlink" href="#a-uart-request-and-reply" title="Permanent link">&para;</a></h2>
 <figure class="kb-figure">
@@ -1109,15 +1327,15 @@ committed figure no longer matches the code. Each figure below lists the files i
 <details class="kb-figure-desc">
 <summary>Figure description and sources</summary>
 <p>The driver's Write call reaches the Uart, which takes its writer lock and hands the bytes to ESP-IDF's uart driver with uart_tx_chars, again after eight character times until every byte is in the FIFO, and the bytes go out on TX to the Device. The Device's reply arrives on RX into the uart driver's ring buffer. The driver's Read call takes the reader lock, reports any pending framing, parity or overflow event first, waits up to its timeout for one byte and then takes the bytes already buffered without waiting; the count returns to the driver.</p>
-<p>Drawn from: <a href="../model/uart-write-read.seq.yml"><code>docs/model/uart-write-read.seq.yml</code></a>; <a href="https://github.com/kokeb-labs-drivers/port-esp32/blob/ff01af770e54d7cdee01da00cb73b96414b3f192/inc/kb/port/esp32/uart.hpp"><code>inc/kb/port/esp32/uart.hpp</code></a>; <a href="https://github.com/kokeb-labs-drivers/port-esp32/blob/ff01af770e54d7cdee01da00cb73b96414b3f192/src/boundary/uart.cpp"><code>src/boundary/uart.cpp</code></a>; <a href="https://github.com/kokeb-labs-drivers/port-esp32/blob/ff01af770e54d7cdee01da00cb73b96414b3f192/src/uart.cpp"><code>src/uart.cpp</code></a>.</p>
+<p>Drawn from: <a href="../model/uart-write-read.seq.yml"><code>docs/model/uart-write-read.seq.yml</code></a>; <a href="https://github.com/kokeb-labs-drivers/port-esp32/blob/5f14b9f7e459f07bd5cda078d22a56bfbb005a1f/inc/kb/port/esp32/uart.hpp"><code>inc/kb/port/esp32/uart.hpp</code></a>; <a href="https://github.com/kokeb-labs-drivers/port-esp32/blob/5f14b9f7e459f07bd5cda078d22a56bfbb005a1f/src/boundary/uart.cpp"><code>src/boundary/uart.cpp</code></a>; <a href="https://github.com/kokeb-labs-drivers/port-esp32/blob/5f14b9f7e459f07bd5cda078d22a56bfbb005a1f/src/uart.cpp"><code>src/uart.cpp</code></a>.</p>
 </details>
 <p>Hardware description: <a href="../model/uart-write-read.seq.yml"><code>docs/model/uart-write-read.seq.yml</code></a></p>
 <p>Drawn from:</p>
 <ul>
 <li><a href="../model/uart-write-read.seq.yml"><code>docs/model/uart-write-read.seq.yml</code></a></li>
-<li><a href="https://github.com/kokeb-labs-drivers/port-esp32/blob/ff01af770e54d7cdee01da00cb73b96414b3f192/inc/kb/port/esp32/uart.hpp"><code>inc/kb/port/esp32/uart.hpp</code></a></li>
-<li><a href="https://github.com/kokeb-labs-drivers/port-esp32/blob/ff01af770e54d7cdee01da00cb73b96414b3f192/src/boundary/uart.cpp"><code>src/boundary/uart.cpp</code></a></li>
-<li><a href="https://github.com/kokeb-labs-drivers/port-esp32/blob/ff01af770e54d7cdee01da00cb73b96414b3f192/src/uart.cpp"><code>src/uart.cpp</code></a></li>
+<li><a href="https://github.com/kokeb-labs-drivers/port-esp32/blob/5f14b9f7e459f07bd5cda078d22a56bfbb005a1f/inc/kb/port/esp32/uart.hpp"><code>inc/kb/port/esp32/uart.hpp</code></a></li>
+<li><a href="https://github.com/kokeb-labs-drivers/port-esp32/blob/5f14b9f7e459f07bd5cda078d22a56bfbb005a1f/src/boundary/uart.cpp"><code>src/boundary/uart.cpp</code></a></li>
+<li><a href="https://github.com/kokeb-labs-drivers/port-esp32/blob/5f14b9f7e459f07bd5cda078d22a56bfbb005a1f/src/uart.cpp"><code>src/uart.cpp</code></a></li>
 </ul>
 
 
@@ -1173,13 +1391,13 @@ committed figure no longer matches the code. Each figure below lists the files i
         
         
           
-          <a href="../changelog/" class="md-footer__link md-footer__link--next" aria-label="Next: Changelog">
+          <a href="../assurance/bench/" class="md-footer__link md-footer__link--next" aria-label="Next: Overview">
             <div class="md-footer__title">
               <span class="md-footer__direction">
                 Next
               </span>
               <div class="md-ellipsis">
-                Changelog
+                Overview
               </div>
             </div>
             <div class="md-footer__button md-icon">

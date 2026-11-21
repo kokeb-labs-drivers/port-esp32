@@ -334,6 +334,25 @@
   
   
     <li class="md-tabs__item">
+      <a href="../dma/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  DMA
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
       <a href="../error-mapping/" class="md-tabs__link">
         
   
@@ -633,6 +652,33 @@
   
   
     <li class="md-nav__item">
+      <a href="../dma/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    DMA
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../error-mapping/" class="md-nav__link">
         
   
@@ -728,6 +774,8 @@
           
         
       
+        
+      
     
     
     
@@ -746,7 +794,7 @@
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_8" checked>
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_9" checked>
         
           
           <div class="md-nav__link md-nav__container">
@@ -768,14 +816,14 @@
             </a>
             
               
-              <label class="md-nav__link " for="__nav_8" id="__nav_8_label" tabindex="">
+              <label class="md-nav__link " for="__nav_9" id="__nav_9_label" tabindex="">
                 <span class="md-nav__icon md-icon"></span>
               </label>
             
           </div>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_8_label" aria-expanded="true">
-          <label class="md-nav__title" for="__nav_8">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_9_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_9">
             <span class="md-nav__icon md-icon"></span>
             
   
@@ -962,6 +1010,176 @@
             
               
             
+              
+                
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+          
+          
+        
+      
+    
+    
+      
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_9_5" >
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../assurance/bench/" class="md-nav__link ">
+              
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    DMA bench kit
+  
+
+    
+  </span>
+  
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_9_5" id="__nav_9_5_label" tabindex="">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_9_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_9_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    DMA bench kit
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../assurance/bench/procedure-esp32/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Procedure
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../assurance/bench/evidence-form/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Evidence form
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../assurance/bench/runs/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Runs
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
           </ul>
         </nav>
       
@@ -1113,7 +1331,7 @@ header):</p>
 </tr>
 <tr>
 <td><code>src/boundary/spi.cpp</code></td>
-<td><code>spi_master</code>, the DMA buffer allocation (<code>esp_heap_caps.h</code>, <code>esp_cache_private.h</code>)</td>
+<td><code>spi_master</code> (polling and queued transactions), the staging buffer allocation (<code>esp_heap_caps.h</code>, <code>esp_cache_private.h</code>)</td>
 </tr>
 <tr>
 <td><code>src/boundary/uart.cpp</code></td>
@@ -1125,7 +1343,11 @@ header):</p>
 </tr>
 <tr>
 <td><code>src/boundary/adc.cpp</code></td>
-<td><code>adc_oneshot</code>, <code>adc_cali</code></td>
+<td><code>adc_oneshot</code>, <code>adc_cali</code>, <code>adc_continuous</code> (two IRAM callbacks)</td>
+</tr>
+<tr>
+<td><code>src/boundary/dma.cpp</code></td>
+<td><code>esp_cache_msync</code>, <code>esp_ptr_dma_capable</code>, <code>esp_dma_is_buffer_alignment_satisfied</code></td>
 </tr>
 <tr>
 <td><code>src/boundary/pwm.cpp</code></td>
@@ -1174,7 +1396,7 @@ its poison build compiles the platform-free code with every SDK header replaced 
 <td>DEV-001</td>
 <td>Rule 6.7.1 (local variables with static storage)</td>
 <td>the ADC, CAN, I2C, SPI and UART boundary files</td>
-<td>ESP-IDF hands out driver handles that outlive each call, and no SDK type may reach a public header: the handles live in one function-local static table per peripheral (also the SPI transaction descriptors, the SPI DMA buffer pointers, the UART queue lengths, the SPI zero buffer)</td>
+<td>ESP-IDF hands out driver handles that outlive each call, and no SDK type may reach a public header: the handles live in one function-local static table per peripheral (also the SPI transaction descriptors, the SPI DMA buffer pointers, the UART queue lengths, the SPI zero buffer, and the ADC continuous handle with the port stream its IRAM callbacks feed)</td>
 <td>One accessor per table in an anonymous namespace; handles only; the index (I2C port, UART port, SPI host and slot, TWAI controller, ADC slot) is claimed by the logic before the SDK is called (DEV-003), so a second object is refused before it reaches a table; entries written by the owner's <code>EnsureReady()</code> after its claim succeeded (only the claimant reaches them) and cleared by <code>Release()</code> under the owner's lock; every accessor exercised by the host tests</td>
 </tr>
 <tr>
@@ -1197,6 +1419,13 @@ its poison build compiles the platform-free code with every SDK header replaced 
 <td>the ADC and SPI boundary files, three variables</td>
 <td><code>adc_oneshot_read</code>, <code>adc_cali_raw_to_voltage</code> and <code>spi_device_get_actual_freq</code> return through <code>int*</code>, and <code>int32_t</code> is <code>long</code> on the ESP32 toolchains</td>
 <td>One <code>int</code> local per call, converted at once to a fixed-width type; every other SDK <code>int</code> is held in <code>int32_t</code> and cast at the call</td>
+</tr>
+<tr>
+<td>DEV-006</td>
+<td>Rule 8.2.3 (casting away const)</td>
+<td>the DMA boundary file, one call</td>
+<td><code>kb::dma::CacheOps::Clean</code> takes the range as <code>const</code> (a clean only writes cache lines back to memory), and ESP-IDF's <code>esp_cache_msync</code> takes <code>void*</code> for both directions</td>
+<td>One conversion, in <code>CacheWriteBack</code>, of whole lines of one <code>kb::dma::Buffer</code>, passed only with the C2M flag, which writes nothing through the pointer; host-tested over the fakes</td>
 </tr>
 <tr>
 <td>DEV-005</td>

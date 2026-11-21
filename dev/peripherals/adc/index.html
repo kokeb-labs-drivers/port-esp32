@@ -336,6 +336,25 @@
   
   
     <li class="md-tabs__item">
+      <a href="../../dma/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  DMA
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
       <a href="../../error-mapping/" class="md-tabs__link">
         
   
@@ -865,6 +884,17 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#continuous-conversions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Continuous conversions
+      
+    </span>
+  </a>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -972,6 +1002,33 @@
   
   
     <li class="md-nav__item">
+      <a href="../../dma/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    DMA
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../../error-mapping/" class="md-nav__link">
         
   
@@ -1063,6 +1120,8 @@
       
         
           
+        
+      
         
       
     
@@ -1219,6 +1278,17 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#continuous-conversions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Continuous conversions
+      
+    </span>
+  </a>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -1358,6 +1428,11 @@ never delete the unit while another channel reads it. <code>LastError()</code> i
 </tr>
 </tbody>
 </table>
+<h2 id="continuous-conversions">Continuous conversions<a class="headerlink" href="#continuous-conversions" title="Permanent link">&para;</a></h2>
+<p><code>AdcStream&lt;Frame, Frames&gt;</code> (<code>adc_stream.hpp</code>; the port's default is <code>AdcStreamDefault</code>) runs ESP-IDF's ADC continuous
+mode into a <code>kb::dma::Stream</code>: frames copied in the conversion-done interrupt with its time, a pool overflow as a
+separate counted signal, the owner task reading the stream. A unit is either one-shot or continuous, not both. Rules
+and conformance: <a href="../../dma/">DMA</a>.</p>
 
 
 

@@ -336,6 +336,25 @@
   
   
     <li class="md-tabs__item">
+      <a href="../../dma/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  DMA
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
       <a href="../../error-mapping/" class="md-tabs__link">
         
   
@@ -983,6 +1002,33 @@
   
   
     <li class="md-nav__item">
+      <a href="../../dma/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    DMA
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../../error-mapping/" class="md-nav__link">
         
   
@@ -1074,6 +1120,8 @@
       
         
           
+        
+      
         
       
     
@@ -1319,7 +1367,7 @@ handle for asynchronous transfers: ESP-IDF refuses a mix of synchronous and asyn
 <details class="kb-figure-desc">
 <summary>Figure description and sources</summary>
 <p>The driver's WriteRead call reaches the I2cController, which takes its lock within the call's timeout and, for a new address, moves its one device handle to it without bus traffic. ESP-IDF's i2c_master sends START, the address with the write bit and the register bytes to the Device, then a repeated START and the address with the read bit, reads the reply and ends with STOP. The I2cController classifies the esp_err_t by the time the transfer took, runs the bus recovery when SDA or SCL stays low, and returns a kb::Status to the driver.</p>
-<p>Drawn from: <a href="../../model/i2c-write-read.seq.yml"><code>docs/model/i2c-write-read.seq.yml</code></a>; <a href="https://github.com/kokeb-labs-drivers/port-esp32/blob/ff01af770e54d7cdee01da00cb73b96414b3f192/inc/kb/port/esp32/i2c.hpp"><code>inc/kb/port/esp32/i2c.hpp</code></a>; <a href="https://github.com/kokeb-labs-drivers/port-esp32/blob/ff01af770e54d7cdee01da00cb73b96414b3f192/src/boundary/i2c.cpp"><code>src/boundary/i2c.cpp</code></a>; <a href="https://github.com/kokeb-labs-drivers/port-esp32/blob/ff01af770e54d7cdee01da00cb73b96414b3f192/src/i2c.cpp"><code>src/i2c.cpp</code></a>.</p>
+<p>Drawn from: <a href="../../model/i2c-write-read.seq.yml"><code>docs/model/i2c-write-read.seq.yml</code></a>; <a href="https://github.com/kokeb-labs-drivers/port-esp32/blob/5f14b9f7e459f07bd5cda078d22a56bfbb005a1f/inc/kb/port/esp32/i2c.hpp"><code>inc/kb/port/esp32/i2c.hpp</code></a>; <a href="https://github.com/kokeb-labs-drivers/port-esp32/blob/5f14b9f7e459f07bd5cda078d22a56bfbb005a1f/src/boundary/i2c.cpp"><code>src/boundary/i2c.cpp</code></a>; <a href="https://github.com/kokeb-labs-drivers/port-esp32/blob/5f14b9f7e459f07bd5cda078d22a56bfbb005a1f/src/i2c.cpp"><code>src/i2c.cpp</code></a>.</p>
 </details>
 <p>The controller owns the port and its pins: a second <code>I2cController</code> on the same port, or any port object on SDA
 or SCL, gets <code>Busy</code> from <code>EnsureReady()</code>.</p>
