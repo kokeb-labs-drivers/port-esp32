@@ -1,0 +1,4 @@
+# dma_adc_bench: the ADC continuous interrupt path runs from IRAM while NVS is written (the port's linker fragment
+# places its stream interrupt path in IRAM with this option).
+CONFIG_ADC_CONTINUOUS_ISR_IRAM_SAFE=y
+CONFIG_ESP_TIMER_IN_IRAM=y

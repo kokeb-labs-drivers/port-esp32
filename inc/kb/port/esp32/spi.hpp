@@ -11,16 +11,25 @@
  * the limit; a longer frame is refused with `InvalidArgument` (never split into several
  * transactions).
  *
- * DMA. The port owns one DMA-capable, aligned buffer per DMA host (a transmit and a receive half),
- * allocated once by SpiBus::EnsureReady(). Every DMA frame is copied in and out of it under the bus
- * lock, so any caller buffer works, the port allocates nothing per transfer, the DMA's rounding
- * of receive lengths to whole words never writes past a caller's buffer, and after a failed host
- * (below) the hardware can only ever write port memory. On a chip whose internal RAM sits behind a
- * cache (ESP32-P4, 64-byte lines) ESP-IDF itself still bounces a receive whose length is not a
- * whole number of cache lines through a heap block, per transfer (full-duplex receive cannot be
- * longer than the frame, so the port cannot pad it); frames in whole lines avoid it, and a
- * transient lack of heap there is `Busy`. Without DMA the CPU copies through the FIFO. `tx` and
- * `rx` must not overlap.
+ * DMA (docs/dma.md). Each DMA host has one port-owned staging buffer (a transmit and a receive
+ * half): the board's static `SpiStaging` given in `SpiBusConfig::staging` (the default the examples
+ * use), or, without one, a block from `heap_caps_aligned_alloc` taken once by
+ * SpiBus::EnsureReady(). EnsureReady() checks that it is DMA-capable and aligned. Every DMA frame
+ * is copied in and out of it under the bus lock, so any caller buffer works (unaligned, odd length,
+ * not DMA-capable), the DMA's rounding of receive lengths to whole words lands in port memory, and
+ * after a failed host (below) the hardware can only ever write port memory: the staging stays held
+ * (quarantined) until the host is torn down. Every DMA transaction carries
+ * `SPI_TRANS_DMA_BUFFER_ALIGN_MANUAL`, so ESP-IDF refuses instead of allocating a bounce buffer:
+ * nothing is allocated after start. On the ESP32-P4 (internal RAM behind a 64-byte cache) a DMA
+ * receive must be whole lines in length; a shorter one is refused with `InvalidArgument`
+ * (SpiBusLimits() says so at build time). Without DMA the CPU copies through the FIFO. `tx` and
+ * `rx` must not overlap. Zero-copy transfers of a typed `kb::dma::Buffer` go through
+ * `SpiDmaChannel` (spi_dma.hpp).
+ *
+ * Fallback. When the chip has no free DMA channel (`ESP_ERR_NOT_FOUND`, the GDMA pairs of the
+ * ESP32-C6 are three), EnsureReady() fails, unless `SpiBusConfig::dma_fallback` allows the FIFO
+ * path: then the bus runs without DMA, Capabilities() and Health() say `Polled` with the 64-byte
+ * ceiling, and LastError() keeps `ESP_ERR_NOT_FOUND`. The fallback is never silent.
  *
  * Bounded time. The port waits for the end of the transaction for its wire time W (the frame's
  * bits at the clock the SDK actually set, plus the chip-select setup and hold cycles) plus T. When
@@ -44,7 +53,9 @@
  * Results: `Ok` (clocked); `InvalidArgument` (bad spans, a frame longer than MaxFrameBytes() or
  * beyond kMaxTimeout, a bad configuration); `Busy` (the bus lock not had within T, or a pin, host
  * or device slot taken; nothing clocked); `Timeout` (ended later than W + T: complete, but late);
- * `Fault` (the host is failed, or no memory for the DMA buffer); `NotReady` (before EnsureReady()).
+ * `Fault` (the host is failed, or no memory for the staging buffer); `NotReady` (before
+ * EnsureReady()); `Unsupported` from EnsureReady() when no DMA channel is free and `dma_fallback`
+ * is off (`ESP_ERR_NOT_FOUND`).
  *
  * SPDX-License-Identifier: MIT
  * Copyright (c) 2026 The port-esp32 authors
@@ -59,7 +70,9 @@
 #include <cstdint>
 #include <span>
 
+#include "kb/dma/capabilities.hpp"
 #include "kb/interfaces/spi.hpp"
+#include "kb/port/esp32/dma.hpp"
 #include "kb/port/esp32/error.hpp"
 #include "kb/rtos/mutex.hpp"
 #include "kb/utils/result.hpp"
@@ -68,24 +81,24 @@
 
 namespace kb::port::esp32 {
 
-/** @brief The longest frame without DMA, on every ESP32 target (the SPI FIFO). */
-inline constexpr std::size_t kSpiMaxFrameBytes = 64U;
-/** @brief The longest frame with DMA: the largest port-owned DMA buffer of a host. */
-inline constexpr std::size_t kSpiMaxDmaFrameBytes = 4092U;
-/** @brief The smallest DMA buffer a host may be given. */
-inline constexpr std::size_t kSpiMinDmaBufferBytes = 4U;
-
 /** @brief How an SPI host is wired. */
 struct SpiBusConfig {
   uint8_t host{1U};     ///< `spi_host_device_t`: 1 is SPI2_HOST, 2 is SPI3_HOST (where it exists).
   int16_t mosi_pin{-1}; ///< GPIO of MOSI, or -1 when unused.
   int16_t miso_pin{-1}; ///< GPIO of MISO, or -1 when unused.
   int16_t sclk_pin{-1}; ///< GPIO of SCLK.
-  bool dma{false};      ///< Use a GDMA channel and the port's DMA buffer (see the file comment).
-  /// With `dma`: the longest frame of the host, kSpiMinDmaBufferBytes to kSpiMaxDmaFrameBytes. The
-  /// port allocates twice this (transmit and receive), DMA-capable and aligned, once in
-  /// EnsureReady().
+  bool dma{false};      ///< Use a DMA channel and the staging buffer (see the file comment).
+  /// With `dma` and no `staging`: the longest frame of the host, kSpiMinDmaBufferBytes to
+  /// kSpiMaxDmaFrameBytes. The port allocates twice this (transmit and receive), DMA-capable and
+  /// aligned, once in EnsureReady(). Ignored when `staging` is given (its frame is the limit).
   uint16_t dma_buffer_bytes{static_cast<uint16_t>(kSpiMaxDmaFrameBytes)};
+  /// With `dma`: the board's static staging buffer (`SpiStaging<N>::Ref()`); empty: allocate once.
+  SpiStagingRef staging{};
+  /// The interrupt level of the host: 0 for the ESP-IDF default, 1 to 3 (`InterruptLevelOf` of the
+  /// board's `kb::dma::StreamAssignment`). ESP-IDF allocates exactly that level or fails.
+  uint8_t interrupt_level{0U};
+  /// With `dma`: run without DMA (reported, see the file comment) when no DMA channel is free.
+  bool dma_fallback{false};
 };
 
 /** @brief One device on an SpiBus. */
@@ -146,11 +159,20 @@ public:
   void MarkFailed() noexcept {
     failed_.store(true);
   }
-  /** @brief The longest frame of a device on this host: kSpiMaxFrameBytes, or with DMA the DMA
-   * buffer's size. */
+  /** @brief The longest frame of a device on this host: kSpiMaxFrameBytes, or with DMA the
+   * staging buffer's frame. */
   [[nodiscard]] std::size_t MaxFrameBytes() const noexcept {
-    return config_.dma ? std::size_t{config_.dma_buffer_bytes} : kSpiMaxFrameBytes;
+    return dma_active_ ? frame_bytes_ : kSpiMaxFrameBytes;
   }
+  /** @brief True when the host moves frames by DMA (false before EnsureReady() and after a
+   * fallback). */
+  [[nodiscard]] bool DmaActive() const noexcept {
+    return dma_active_;
+  }
+  /** @brief What the host offers now: mode, ceiling, staging size, alignment unit. */
+  [[nodiscard]] kb::dma::Capabilities Capabilities() const noexcept;
+  /** @brief The DMA part of a handler's health record: mode, failed host, held staging. */
+  [[nodiscard]] kb::dma::DmaHealth Health() const noexcept;
 
   /** @brief Takes the bus lock, waiting at most `timeout` (devices hold it for one frame). */
   [[nodiscard]] bool TryLockFor(kb::Milliseconds timeout) noexcept {
@@ -162,15 +184,24 @@ public:
   }
 
 private:
-  friend class SpiDevice; // uses the DMA buffer under the bus lock
+  friend class SpiDevice;  // uses the staging buffer under the bus lock
+  friend class SpiDmaCore; // counts zero-copy errors and quarantines under the bus lock
   [[nodiscard]] bool configValid() const noexcept;
   [[nodiscard]] int32_t open() noexcept;
+  [[nodiscard]] int32_t openStaging() noexcept;
+  void closeStaging() noexcept;
 
   SpiBusConfig config_;
   kb::rtos::Mutex mutex_;
   CallerRecord error_;
-  std::span<uint8_t> dma_tx_; // the port's DMA buffer, transmit half (empty without DMA)
+  std::span<uint8_t> dma_tx_; // the staging buffer, transmit half (empty without DMA)
   std::span<uint8_t> dma_rx_; // receive half
+  std::size_t frame_bytes_{kSpiMaxFrameBytes};
+  bool dma_active_{false};   // written by EnsureReady() before ready_, read after it
+  bool heap_staging_{false}; // the staging came from the heap (freed by Release())
+  bool staging_held_{false}; // a transaction that never ended still owns the staging
+  Counter quarantines_;
+  Counter dma_errors_;
   std::atomic<bool> ready_{false};
   std::atomic<bool> failed_{false};
 };
@@ -217,6 +248,7 @@ public:
   }
 
 private:
+  friend class SpiDmaCore; // zero-copy transactions of this device (spi_dma.hpp)
   [[nodiscard]] kb::Status addLocked(uint32_t hz) noexcept;
   [[nodiscard]] kb::Status removeLocked() noexcept;
   [[nodiscard]] kb::Status frameLocked(std::span<const uint8_t> tx, std::span<uint8_t> rx) noexcept;

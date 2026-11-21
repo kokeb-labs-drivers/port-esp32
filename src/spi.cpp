@@ -1,7 +1,8 @@
-// SpiBus and SpiDevice: argument checks, pin and slot claims, the bus lock, one polling transaction
-// per frame with a wait sized to the frame's wire time, and the failed-host state when a
-// transaction never ends. Platform-free; every SDK call goes through sdk.hpp
-// (src/boundary/spi.cpp).
+// SpiBus and SpiDevice: argument checks, pin and slot claims, the bus lock, the staging buffer of a
+// DMA host (static or allocated once, checked at start, held while a transaction may still write
+// it), one polling transaction per frame with a wait sized to the frame's wire time, the reported
+// fallback without DMA, and the failed-host state when a transaction never ends. Platform-free;
+// every SDK call goes through sdk.hpp (src/boundary/spi.cpp, src/boundary/dma.cpp).
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 The port-esp32 authors
 #include <algorithm>
@@ -10,7 +11,9 @@
 #include <span>
 
 #include "claims.hpp"
+#include "kb/dma/capabilities.hpp"
 #include "kb/interfaces/spi.hpp"
+#include "kb/port/esp32/dma.hpp"
 #include "kb/port/esp32/error.hpp"
 #include "kb/port/esp32/spi.hpp"
 #include "kb/rtos/mutex.hpp"
@@ -74,23 +77,79 @@ SpiBus::~SpiBus() noexcept {
   static_cast<void>(Release());
 }
 
+namespace {
+// A static staging buffer as SpiStaging makes it: halves in whole units, a frame that fits. Its
+// address is checked at start by DmaMemoryUsable (DMA-capable, aligned).
+[[nodiscard]] bool StagingShapeValid(const SpiStagingRef& staging) noexcept {
+  return ((staging.half % kSpiStagingAlign) == 0U) && (staging.frame >= kSpiMinDmaBufferBytes) &&
+         (staging.frame <= kSpiMaxDmaFrameBytes) && (staging.frame <= staging.half);
+}
+} // namespace
+
 bool SpiBus::configValid() const noexcept {
+  const bool staging_ok = (config_.staging.base == nullptr)
+                              ? ((config_.dma_buffer_bytes >= kSpiMinDmaBufferBytes) &&
+                                 (config_.dma_buffer_bytes <= kSpiMaxDmaFrameBytes))
+                              : StagingShapeValid(config_.staging);
   return (config_.host >= kFirstHost) && (config_.host <= sdk::SpiHostLast()) &&
          sdk::GpioValidOutput(config_.sclk_pin) &&
          ((config_.mosi_pin >= 0) || (config_.miso_pin >= 0)) &&
-         (!config_.dma || ((config_.dma_buffer_bytes >= kSpiMinDmaBufferBytes) &&
-                           (config_.dma_buffer_bytes <= kSpiMaxDmaFrameBytes)));
+         InterruptLevelUsable(config_.interrupt_level) && (!config_.dma || staging_ok);
 }
 
-int32_t SpiBus::open() noexcept {
-  int32_t err = sdk::SpiBusOpen(config_);
-  if ((err == esp_err::kOk) && config_.dma) {
+int32_t SpiBus::openStaging() noexcept {
+  int32_t err = esp_err::kOk;
+  if (config_.staging.base != nullptr) {
+    // The board's static staging: DMA-capable internal RAM, aligned (checked, never assumed).
+    const std::span<uint8_t> all{config_.staging.base, 2U * config_.staging.half};
+    if (DmaMemoryUsable(all)) {
+      dma_tx_ = all.first(config_.staging.frame);
+      dma_rx_ = all.subspan(config_.staging.half, config_.staging.frame);
+      frame_bytes_ = config_.staging.frame;
+      heap_staging_ = false;
+    } else {
+      err = esp_err::kInvalidArg;
+    }
+  } else {
     err = sdk::SpiDmaBufferOpen(config_.host, config_.dma_buffer_bytes, dma_tx_, dma_rx_);
-    if (err != esp_err::kOk) {
-      static_cast<void>(sdk::SpiBusClose(config_.host));
+    if (err == esp_err::kOk) {
+      frame_bytes_ = config_.dma_buffer_bytes;
+      heap_staging_ = true;
     }
   }
   return err;
+}
+
+void SpiBus::closeStaging() noexcept {
+  if (heap_staging_) {
+    sdk::SpiDmaBufferClose(config_.host);
+  }
+  heap_staging_ = false;
+  staging_held_ = false;
+  dma_tx_ = std::span<uint8_t>{};
+  dma_rx_ = std::span<uint8_t>{};
+  frame_bytes_ = kSpiMaxFrameBytes;
+}
+
+int32_t SpiBus::open() noexcept {
+  dma_active_ = false;
+  int32_t err = sdk::SpiBusOpen(config_, config_.dma);
+  int32_t kept = esp_err::kOk;
+  if ((err == esp_err::kNotFound) && config_.dma && config_.dma_fallback) {
+    // No free DMA channel: the declared fallback, the FIFO path, reported (Capabilities, Health).
+    kept = err;
+    err = sdk::SpiBusOpen(config_, false);
+  } else if ((err == esp_err::kOk) && config_.dma) {
+    err = openStaging();
+    if (err == esp_err::kOk) {
+      dma_active_ = true;
+    } else {
+      static_cast<void>(sdk::SpiBusClose(config_.host));
+    }
+  } else {
+    // Opened without DMA, or failed: nothing more to set up.
+  }
+  return ((err == esp_err::kOk) && (kept != esp_err::kOk)) ? kept : err;
 }
 
 kb::Status SpiBus::EnsureReady() noexcept {
@@ -107,7 +166,15 @@ kb::Status SpiBus::EnsureReady() noexcept {
       status = error_.Set(kb::Status::Busy, esp_err::kNotAllowed); // a pin has another owner
     } else {
       const int32_t err = open();
-      status = error_.Set(MapEspErr(err), err);
+      const bool fell_back = (err == esp_err::kNotFound) && config_.dma && config_.dma_fallback;
+      if (fell_back) {
+        status = kb::Status::Ok; // running without DMA; LastError() keeps ESP_ERR_NOT_FOUND
+        static_cast<void>(error_.Set(kb::Status::Unsupported, err));
+      } else if (err == esp_err::kNotFound) {
+        status = error_.Set(kb::Status::Unsupported, err); // no DMA channel free, no fallback
+      } else {
+        status = error_.Set(MapEspErr(err), err);
+      }
       if (status == kb::Status::Ok) {
         ready_.store(true);
       } else {
@@ -132,17 +199,35 @@ kb::Status SpiBus::Release() noexcept {
       status = error_.Set(MapEspErr(err), err);
       if (status == kb::Status::Ok) {
         ready_.store(false);
-        if (config_.dma) {
-          sdk::SpiDmaBufferClose(config_.host);
-          dma_tx_ = std::span<uint8_t>{};
-          dma_rx_ = std::span<uint8_t>{};
-        }
+        dma_active_ = false;
+        closeStaging(); // the host is torn down: no transaction can still write the staging
         detail::UnclaimPins(config_.sclk_pin, config_.mosi_pin, config_.miso_pin);
         detail::UnclaimHardware(detail::Hardware::SpiHost, config_.host);
       }
     }
   }
   return status;
+}
+
+kb::dma::Capabilities SpiBus::Capabilities() const noexcept {
+  kb::dma::Capabilities c{};
+  const bool dma = ready_.load() && dma_active_;
+  c.mode = dma ? kb::dma::TransferMode::Dma : kb::dma::TransferMode::Polled;
+  c.zero_copy = dma;
+  c.confirmed_abort = true; // a lease ends only when ESP-IDF reports the transaction finished
+  c.max_frame_bytes = dma ? frame_bytes_ : kSpiMaxFrameBytes;
+  c.staging_bytes = dma ? dma_rx_.size() : 0U;
+  c.align_bytes = dma ? sdk::SpiDmaRxUnit() : 1U;
+  return c;
+}
+
+kb::dma::DmaHealth SpiBus::Health() const noexcept {
+  kb::dma::DmaHealth h{};
+  h.mode = Capabilities().mode;
+  h.faulted = failed_.load();
+  h.quarantined = quarantines_.Get();
+  h.errors = dma_errors_.Get();
+  return h;
 }
 
 // --- SpiDevice
@@ -252,9 +337,12 @@ kb::Status SpiDevice::checkFrame(std::span<const uint8_t> tx,
                                  std::span<uint8_t> rx) const noexcept {
   const std::size_t total = std::max(tx.size(), rx.size());
   const std::size_t limit = bus_.MaxFrameBytes();
-  const std::size_t single =
-      (tx.empty() && !bus_.Config().dma) ? std::min(limit, sdk::SpiZeroBytes()) : limit;
-  bool ok = kb::iface::SpiSpansValid(tx, rx) && (total > 0U) && (total <= single);
+  const bool dma = bus_.DmaActive();
+  const std::size_t single = (tx.empty() && !dma) ? std::min(limit, sdk::SpiZeroBytes()) : limit;
+  // A DMA receive on a cached chip (ESP32-P4) must be whole cache lines: ESP-IDF would otherwise
+  // bounce it through the heap, which the manual-alignment flag refuses.
+  const bool rx_ok = !dma || rx.empty() || ((rx.size() % sdk::SpiDmaRxUnit()) == 0U);
+  bool ok = kb::iface::SpiSpansValid(tx, rx) && (total > 0U) && (total <= single) && rx_ok;
   if (ok && (actual_hz_ > 0U)) {
     // T + 2 x (W + T) at most kMaxTimeout: the documented bound of one call holds.
     ok = WorstMs(BoundedMs(config_.timeout), waitMs(total)) <= uint64_t{kMaxTimeout.Count()};
@@ -286,7 +374,7 @@ kb::Status SpiDevice::frameLocked(std::span<const uint8_t> tx, std::span<uint8_t
   std::fill(rx.begin(), rx.end(), uint8_t{0U});
   const std::size_t n = std::max(tx.size(), rx.size());
   const uint32_t wait = waitMs(n);
-  const bool dma = bus_.Config().dma;
+  const bool dma = bus_.DmaActive();
   std::span<const uint8_t> t = tx;
   std::span<uint8_t> r = rx;
   if (dma) {
@@ -300,18 +388,24 @@ kb::Status SpiDevice::frameLocked(std::span<const uint8_t> tx, std::span<uint8_t
     t = out;
     r = rx.empty() ? std::span<uint8_t>{} : bus_.dma_rx_.first(n);
   }
-  int32_t err = sdk::SpiStart(slot_, t, r);
+  bus_.staging_held_ = dma; // the hardware owns the staging from the start of the transaction
+  int32_t err = sdk::SpiStart(slot_, t, r, dma);
   bool failed = false;
   if (err == esp_err::kOk) {
     err = endLocked(wait, failed);
   }
   const bool ended = (err == esp_err::kOk) || ((err == esp_err::kTimeout) && !failed);
+  if (failed) {
+    bus_.quarantines_.Add(); // the staging stays held until the host is torn down
+  } else {
+    bus_.staging_held_ = false; // ended (or never started): the memory is the port's again
+  }
   if (dma && ended && !rx.empty()) {
     static_cast<void>(std::copy(r.begin(), r.end(), rx.begin()));
   }
   kb::Status status = failed ? kb::Status::Fault : MapEspErr(err);
   if (err == esp_err::kNoMem) {
-    status = kb::Status::Busy; // ESP-IDF found no heap for a bounce buffer: transient, try again
+    status = kb::Status::Busy; // a transient lack of heap in the SDK: nothing was clocked
   }
   if (status != kb::Status::Ok) {
     failures_.Add();

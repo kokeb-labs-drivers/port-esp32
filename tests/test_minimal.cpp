@@ -108,3 +108,32 @@ KB_TEST("gpio: an ISR service installed by the application takes only IRAM callb
   KB_REQUIRE(stated.EnsureReady() == Status::Ok);
   KB_CHECK_EQ(stated.EnableInterrupt(kb::iface::Edge::Falling, Count, &hits), Status::Ok);
 }
+
+KB_TEST("minimal: ADC continuous without the IRAM-safe option refuses iram_safe; 2-byte results") {
+  Fresh();
+  esp::AdcStreamConfig c{};
+  c.pins = {1, 2, -1, -1, -1, -1, -1, -1};
+  c.sample_hz = 20000U;
+  c.shape = kb::dma::StreamShape{.frames = 4U, .element_bytes = 2U, .elements = 96U};
+  c.iram_safe = true;
+  {
+    esp::AdcStreamDefault s{c};
+    KB_CHECK_EQ(s.EnsureReady(), Status::Unsupported);
+  }
+  c.iram_safe = false;
+  esp::AdcStreamDefault s{c};
+  KB_REQUIRE(s.EnsureReady() == Status::Ok);
+  KB_CHECK(fake::AdcStreamConfig().format == ADC_DIGI_OUTPUT_FORMAT_TYPE1);
+  KB_REQUIRE(s.Start(kb::Instant{0U}) == Status::Ok);
+  std::array<uint8_t, esp::kAdcDefaultFrameBytes> frame{};
+  frame[2] = 0x23U; // result 1: data 0x123, channel 1 (type 1: 12-bit data, 4-bit channel)
+  frame[3] = 0x11U;
+  static_cast<void>(fake::AdcStreamFrame(frame));
+  esp::AdcStreamDefault::FrameView view{};
+  KB_REQUIRE(s.TryTake(view) == Status::Ok);
+  esp::AdcSample sample{};
+  KB_CHECK_EQ(esp::AdcStreamDefault::Decode(view.Data(), 1U, sample), Status::Ok);
+  KB_CHECK_EQ(sample.raw, 0x123U);
+  KB_CHECK_EQ(sample.channel, 1U);
+  KB_CHECK_EQ(sample.unit, 0U);
+}

@@ -12,8 +12,34 @@ All notable changes of port-esp32. The format follows Keep a Changelog; versions
   models in `docs/model/` (light and dark SVG, readable on a phone).
 - CI path filter: a pull request that changes only documentation runs only the docs, handbook and DCO checks; the
   gate allows the code jobs to be skipped only then. The docs publish only from main and `v*` tags.
+- DMA (docs/dma.md), on kb-core's `kb::dma`: `dma.hpp` (the regions `InternalRam`, `InternalRamL1`, `Psram<L>`, the
+  DMA masters, `SpiLimits<Target, Dma, StagingBytes>` as `kb::dma::BusLimits`, the static `SpiStaging<N>`,
+  `kInterruptLimits` and `InterruptLevelOf`, `RequireSpiHalfDuplexPhases`, `EspCacheOps` over `esp_cache_msync`);
+  `spi_dma.hpp` (`SpiDmaChannel<Region>`: zero-copy SPI DMA of a `kb::dma::Buffer` through a `kb::dma::Lease`, with
+  `Start`, `Poll`, `Cancel` and `Recover`); `adc_stream.hpp` (`AdcStream<Frame, Frames>` and `AdcStreamDefault`: ADC
+  continuous mode into a `kb::dma::Stream`, the frame copied in the conversion-done interrupt with its time, the pool
+  overflow a separate counted signal, a start-time shape check with a reported one-shot fallback, an IRAM-safe
+  interrupt path placed by the component's `linker.lf`).
+- SPI: `SpiBusConfig::staging` (a board's static staging buffer, checked at start), `interrupt_level` (the ESP-IDF
+  level from the board's stream assignment), `dma_fallback` (no free DMA channel: run without DMA, reported);
+  `SpiBus::Capabilities()`, `Health()`, `DmaActive()`.
+- The kb-core DMA conformance suite, T1 to T18, run against the port's classes linked against kb-core's host
+  DMA-and-cache model (`kb_port_esp32_conformance`, `tests/dma_model/`).
+- The DMA bench kit: the apps `dma_spi_bench` and `dma_adc_bench` in `tests/target/dma/` (built in CI for esp32c6,
+  esp32s3 and esp32), the procedure for an ESP32-C6, an ESP32-S3 and an ESP32 devkit with wiring figures, the evidence
+  form and the runs folder (`docs/assurance/bench/`).
 
 ### Changed
+
+- SPI with DMA: every DMA transaction carries `SPI_TRANS_DMA_BUFFER_ALIGN_MANUAL`, so ESP-IDF refuses instead of
+  allocating a bounce buffer; nothing is allocated per transfer on any target. Breaking on the ESP32-P4: a DMA
+  receive whose length is not a whole number of 64-byte cache lines is refused with `InvalidArgument` (before, ESP-IDF
+  bounced it through the heap per transfer).
+- SPI with DMA and no free DMA channel: `EnsureReady()` returns `Unsupported` (was `NoDevice`).
+- The staging buffer of a host whose transaction never ended stays held until the host is torn down, and is counted
+  in `Health().quarantined`.
+- The kb-core copy adds the `dma` part and its host model (`components/lib/dma/{CMakeLists.txt,inc,host}`);
+  `tools/kb_core_snapshot.py` copies what kb-core's `tools/layout/layout.py vendor` lists.
 
 - The port stands alone: the pcal9555, tmc5160 and bno08x driver submodules, `drivers/drivers.lock.yml`, the pin-hygiene
   workflow and the driver examples are removed; the one example is `port_selftest` (it also brings up the I2C and SPI

@@ -25,7 +25,7 @@ function(kb_port_esp32_under_test name can_source)
   target_link_libraries(${name} PUBLIC kb_port_esp32_api ${name}_fake_idf)
 endfunction()
 
-kb_port_esp32_under_test(kb_port_esp32_full ${KB_PORT_ESP32_CAN_SOURCE})
+kb_port_esp32_under_test(kb_port_esp32_full ${KB_PORT_ESP32_CAN_SOURCE} DEFINES KB_FAKE_ADC_IRAM_SAFE)
 # What the MISRA scans build (ci-misra.yml): the port in both chip variants.
 add_custom_target(kb_port_esp32_scan)
 kb_port_esp32_under_test(kb_port_esp32_minimal ${KB_PORT_ESP32_NO_CAN_SOURCE}
@@ -45,12 +45,12 @@ endfunction()
 
 kb_port_esp32_test(kb_port_esp32_tests
   SOURCES test_error.cpp test_i2c.cpp test_spi.cpp test_uart.cpp test_gpio.cpp test_adc.cpp test_pwm.cpp test_can.cpp
-          test_time.cpp test_log.cpp test_contracts.cpp
+          test_time.cpp test_log.cpp test_contracts.cpp test_spi_dma.cpp test_adc_stream.cpp test_dma.cpp
   LIBS kb_port_esp32_full)
 kb_port_esp32_test(kb_port_esp32_minimal_tests SOURCES test_minimal.cpp LIBS kb_port_esp32_minimal)
 
 # Each public header compiles on its own as ISO C++20 with the strict flags.
-set(_headers adc can error gpio i2c log port pwm spi time uart version)
+set(_headers adc adc_stream can dma error gpio i2c log port pwm spi spi_dma time uart version)
 set(_checks "")
 foreach(_h IN LISTS _headers)
   set(_check "${CMAKE_CURRENT_BINARY_DIR}/header_checks/${_h}.cpp")
@@ -63,7 +63,9 @@ target_compile_options(kb_port_esp32_header_checks PRIVATE ${KB_PORT_ESP32_STRIC
 target_link_libraries(kb_port_esp32_header_checks PRIVATE kb_port_esp32_api)
 
 # Compile-fail tests: each file must fail to build, for the reason in its "EXPECT: <regex>" line.
-foreach(_file IN ITEMS ref_from_wrong_contract.cpp controller_copied.cpp output_pin_as_input.cpp)
+foreach(_file IN ITEMS ref_from_wrong_contract.cpp controller_copied.cpp output_pin_as_input.cpp
+                       half_duplex_both_phases.cpp bus_frame_over_limit.cpp notify_above_esp_limit.cpp
+                       spi_dma_region_unpadded.cpp)
   set(_src "${CMAKE_CURRENT_SOURCE_DIR}/compile_fail/${_file}")
   get_filename_component(_stem "${_src}" NAME_WE)
   file(STRINGS "${_src}" _expect REGEX "EXPECT: ")
@@ -75,6 +77,25 @@ foreach(_file IN ITEMS ref_from_wrong_contract.cpp controller_copied.cpp output_
   add_test(NAME ${_target} COMMAND ${CMAKE_COMMAND} --build ${CMAKE_BINARY_DIR} --target ${_target})
   set_tests_properties(${_target} PROPERTIES PASS_REGULAR_EXPRESSION "${_expect}")
 endforeach()
+
+# The kb-core DMA conformance suite T1-T18 with the port's logic linked against kb-core's host DMA-and-cache model
+# (tests/dma_model/model_boundary.cpp implements the boundary calls of the DMA logic over kb::dma::host::Machine and
+# DmaEngine instead of ESP-IDF), plus the port-specific DMA items (docs/dma.md, "Conformance").
+set(_dma_logic src/adc_stream.cpp src/caller_record.cpp src/claims.cpp src/dma.cpp src/spi.cpp src/spi_dma.cpp)
+list(TRANSFORM _dma_logic PREPEND "${PROJECT_SOURCE_DIR}/")
+add_library(kb_port_esp32_dma_model STATIC ${_dma_logic} "${CMAKE_CURRENT_SOURCE_DIR}/dma_model/model_boundary.cpp")
+target_compile_options(kb_port_esp32_dma_model PRIVATE ${KB_PORT_ESP32_STRICT_FLAGS})
+target_include_directories(kb_port_esp32_dma_model PRIVATE "${PROJECT_SOURCE_DIR}/src")
+target_include_directories(kb_port_esp32_dma_model PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/dma_model")
+target_link_libraries(kb_port_esp32_dma_model PUBLIC kb_port_esp32_api kb::dma_host)
+kb_port_esp32_test(kb_port_esp32_conformance SOURCES test_conformance.cpp LIBS kb_port_esp32_dma_model)
+# Coverage is measured on kb_port_esp32_tests (the port over the ESP-IDF fakes); the conformance build of the same
+# sources is not instrumented (its deeply nested template report also overflows gcovr's parser).
+if("${CMAKE_CXX_FLAGS}" MATCHES "--coverage")
+  foreach(_t IN ITEMS kb_port_esp32_dma_model kb_port_esp32_conformance)
+    target_compile_options(${_t} PRIVATE -fno-profile-arcs -fno-test-coverage)
+  endforeach()
+endif()
 
 # The source layout (tools/check_layout.py): one source per public header, one boundary file per SDK component;
 # and the checker's own test. Needs python3 with PyYAML (the preflight and the CI images have it).

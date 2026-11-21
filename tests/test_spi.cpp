@@ -151,13 +151,12 @@ KB_TEST("spi: with DMA every frame goes through the port's buffer, allocated onc
   esp::SpiBusConfig b = BusConfig();
   b.dma = true;
   b.dma_buffer_bytes = 1028U;
-  fake::CacheAlign(64U); // internal RAM behind a cache (ESP32-P4): whole lines
   esp::SpiBus bus{b};
   esp::SpiDevice dev{bus, DevConfig()};
   KB_REQUIRE(dev.EnsureReady() == Status::Ok);
   KB_CHECK(fake::SpiDma() == SPI_DMA_CH_AUTO);
   KB_CHECK_EQ(fake::HeapBlocks(), 1);
-  KB_CHECK_EQ(fake::HeapLastAlign(), 64U);
+  KB_CHECK_EQ(fake::HeapLastAlign(), 4U);
   KB_CHECK_EQ(bus.MaxFrameBytes(), 1028U);
   // An odd-sized, unaligned caller buffer: the DMA rounds receive lengths up to whole words, so
   // passed directly it would write past the caller's bytes (the fake does as the ESP32 does).
@@ -175,27 +174,48 @@ KB_TEST("spi: with DMA every frame goes through the port's buffer, allocated onc
   KB_CHECK_EQ(g.raw[6], 0U); // nothing written after the frame
   KB_CHECK_EQ(g.guard[0], 0xA5U);
   KB_CHECK_EQ(fake::SpiSent()[0], 9U);
+  // Every DMA transaction asks ESP-IDF to refuse rather than allocate a copy.
+  KB_CHECK((fake::SpiLastFlags() & SPI_TRANS_DMA_BUFFER_ALIGN_MANUAL) != 0U);
   std::vector<uint8_t> read(1028U, 0U);
   KB_CHECK_EQ(dev.Transfer(std::span<const uint8_t>{}, read), Status::Ok); // zeros, one frame
   KB_CHECK_EQ(fake::SpiTransactions(), 2U);
   std::vector<uint8_t> too_long(1029U, 0U);
   KB_CHECK_EQ(dev.Transfer(too_long, std::span<uint8_t>{}), Status::InvalidArgument);
-  KB_CHECK_EQ(fake::HeapBlocks(), 1); // the port allocates nothing per transfer
-  // On a cached chip ESP-IDF itself bounces a receive whose length is not whole cache lines (the
-  // 5-byte and the 1028-byte frames above); a 64-byte frame needs no bounce.
-  KB_CHECK_EQ(fake::SdkBounces(), 2U);
-  std::array<uint8_t, 64> line_tx{};
-  std::array<uint8_t, 64> line_rx{};
-  KB_CHECK_EQ(dev.Transfer(line_tx, line_rx), Status::Ok);
-  KB_CHECK_EQ(fake::SdkBounces(), 2U);
-  fake::Fail("spi_sdk_bounce_alloc", ESP_ERR_NO_MEM); // a transient lack of heap in ESP-IDF
+  KB_CHECK_EQ(fake::HeapBlocks(), 1);                     // the port allocates nothing per transfer
+  KB_CHECK_EQ(fake::SdkBounces(), 0U);                    // and neither does ESP-IDF
+  fake::Fail("spi_device_polling_start", ESP_ERR_NO_MEM); // a transient lack of heap in ESP-IDF
   KB_CHECK_EQ(dev.Transfer(tx, rx), Status::Busy);
   KB_CHECK(FailedWith(dev.LastError(), Status::Busy, ESP_ERR_NO_MEM));
   KB_CHECK(!bus.IsFailed());
-  fake::CacheAlign(0U);
   KB_CHECK_EQ(dev.Release(), Status::Ok);
   KB_CHECK_EQ(bus.Release(), Status::Ok);
   KB_CHECK_EQ(fake::HeapBlocks(), 0);
+}
+
+KB_TEST("spi: on a cached chip a DMA receive must be whole cache lines; ESP-IDF never bounces") {
+  Fresh();
+  esp::SpiBusConfig b = BusConfig();
+  b.dma = true;
+  b.dma_buffer_bytes = 1028U;
+  fake::CacheAlign(64U); // internal RAM behind a cache (ESP32-P4)
+  esp::SpiBus bus{b};
+  esp::SpiDevice dev{bus, DevConfig()};
+  KB_REQUIRE(dev.EnsureReady() == Status::Ok);
+  KB_CHECK_EQ(fake::HeapLastAlign(), 64U);
+  KB_CHECK_EQ(bus.Capabilities().align_bytes, 64U);
+  const std::array<uint8_t, 5> tx{9U, 8U, 7U, 6U, 5U};
+  std::array<uint8_t, 5> rx{};
+  KB_CHECK_EQ(dev.Transfer(tx, rx), Status::InvalidArgument); // refused before the bus
+  KB_CHECK_EQ(fake::SpiTransactions(), 0U);
+  KB_CHECK_EQ(dev.Transfer(tx, std::span<uint8_t>{}), Status::Ok); // a write has no such rule
+  std::array<uint8_t, 64> line_tx{};
+  std::array<uint8_t, 64> line_rx{};
+  KB_CHECK_EQ(dev.Transfer(line_tx, line_rx), Status::Ok);
+  KB_CHECK_EQ(fake::SdkBounces(), 0U);
+  KB_CHECK_EQ(fake::HeapBlocks(), 1);
+  fake::CacheAlign(0U);
+  KB_CHECK_EQ(dev.Release(), Status::Ok);
+  KB_CHECK_EQ(bus.Release(), Status::Ok);
 }
 
 KB_TEST("spi: DMA buffer sizes are checked and an allocation failure fails EnsureReady") {

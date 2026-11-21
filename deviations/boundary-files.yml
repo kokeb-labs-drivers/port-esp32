@@ -11,6 +11,9 @@ boundary_files:
   - path: src/boundary/can.cpp
     sdk: esp-idf
     status: present
+  - path: src/boundary/dma.cpp
+    sdk: esp-idf
+    status: present
   - path: src/boundary/error.cpp
     sdk: esp-idf
     status: present

@@ -6,15 +6,17 @@ zones:
   # The port: public headers and sources. It sees kb-core only through the public kb/<part>/ headers.
   port:
     paths: ["inc/**", "src/**"]
-    may_include: [port, kb_utils, kb_rtos, kb_interfaces, std_subset, sdk]
-  # Host tests: the port, kb-core's host port and harness, and the ESP-IDF fakes (named like the SDK headers).
+    may_include: [port, kb_utils, kb_rtos, kb_interfaces, kb_dma, std_subset, sdk]
+  # Host tests: the port, kb-core's host port, DMA model and harness, the ESP-IDF fakes (named like the SDK
+  # headers), and the bench apps of tests/target/ (ESP-IDF applications, built in CI, run by hand).
   tests:
     paths: ["tests/**"]
-    may_include: [port, kb_utils, kb_rtos, kb_interfaces, kb_host, kb_harness, sdk_fakes, tests, std_any, sdk_any]
+    may_include: [port, kb_utils, kb_rtos, kb_interfaces, kb_dma, kb_host, kb_dma_host, kb_harness, sdk_fakes, tests,
+                  std_any, sdk_any]
   # ESP-IDF applications: they may call ESP-IDF in their own main/ (app_main, FreeRTOS delays).
   examples:
     paths: ["examples/**"]
-    may_include: [port, kb_utils, kb_rtos, kb_interfaces, examples, std_any, sdk_any]
+    may_include: [port, kb_utils, kb_rtos, kb_interfaces, kb_dma, examples, std_any, sdk_any]
   # The pinned kb-core copy: checked by its own CI.
   kb_core:
     paths: ["third_party/kb-core/**"]
@@ -24,6 +26,8 @@ public_headers:
   kb_utils: "third_party/kb-core/components/lib/utils/inc/kb/utils/**"
   kb_rtos: "third_party/kb-core/components/lib/rtos/inc/kb/rtos/**"
   kb_interfaces: "third_party/kb-core/components/lib/interfaces/inc/kb/interfaces/**"
+  kb_dma: "third_party/kb-core/components/lib/dma/inc/kb/dma/**"
+  kb_dma_host: "third_party/kb-core/components/lib/dma/host/inc/kb/dma/host/**"
   kb_host: "third_party/kb-core/components/lib/interfaces/host/inc/kb/interfaces/host/**"
   kb_harness: "third_party/kb-core/tests/harness/**"
 # The ESP-IDF fakes (tests/fakes/esp-idf) carry the SDK's header names; the check excludes that folder (ci-layering.yml)
@@ -33,6 +37,8 @@ header_groups:
 boundary_files: deviations/boundary-files.yml
 sdk_headers:
   - "esp_*"
+  - "nvs.h"
+  - "nvs_flash.h"
   - "esp_adc/*"
   - "driver/*"
   - "hal/*"

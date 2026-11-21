@@ -20,8 +20,9 @@ deviations:
       files keep them in one table per peripheral, indexed by the hardware number or a slot; a function-local
       static is the form with a defined initialisation point (constant initialisation, no static-order
       dependency). The SPI transaction descriptors (one per device slot, which must outlive a polling_start whose
-      polling_end timed out), the SPI DMA buffer pointers, the UART queue lengths and the SPI zero buffer are tables of
-      the same kind.
+      polling_end timed out, or a queued one until its result was taken), the SPI DMA buffer pointers, the UART queue
+      lengths, the SPI zero buffer and the ADC continuous handle with the port stream its IRAM callbacks feed (one
+      continuous driver per chip; a second open is refused with ESP_ERR_NOT_ALLOWED) are tables of the same kind.
     mitigation: >-
       Each table is reached only through one accessor in an anonymous namespace of its boundary file
       (src/boundary/<component>.cpp) and holds SDK handles (and, for SPI, the transaction descriptors and the DMA
@@ -117,3 +118,20 @@ deviations:
     approved_by: maintainer
     date: 2026-11-14
     review_by: 2027-11-14
+  - id: DEV-006
+    check: misra/Rule 8.2.3
+    where: >-
+      src/boundary/dma.cpp
+    reason: >-
+      kb-core's cache hook kb::dma::CacheOps::Clean takes its range as std::span<const std::byte>, because a clean only
+      writes dirty cache lines back to memory and changes no byte of the buffer; ESP-IDF's esp_cache_msync takes
+      `void*` for both directions. The const is removed once to pass the address (clang-tidy
+      cppcoreguidelines-pro-type-const-cast).
+    mitigation: >-
+      One conversion, in CacheWriteBack, of a range that kb::dma::Buffer hands over (whole cache lines of one buffer the
+      port owns), passed only with ESP_CACHE_MSYNC_FLAG_DIR_C2M, under which esp_cache_msync writes nothing through
+      the pointer. The invalidate path (M2C) receives a non-const range and needs no conversion. The host tests check
+      the flag of each call and the count of refused syncs.
+    approved_by: maintainer
+    date: 2026-11-21
+    review_by: 2027-11-21

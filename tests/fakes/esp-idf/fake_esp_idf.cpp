@@ -29,6 +29,9 @@ struct i2c_master_dev_t {
 struct spi_device_t {
   int id;
 };
+struct adc_continuous_ctx_t {
+  int id;
+};
 struct adc_oneshot_unit_ctx_t {
   int id;
 };
@@ -112,6 +115,29 @@ struct State {
   int spi_clock{0};
   spi_dma_chan_t spi_dma{SPI_DMA_DISABLED};
   bool spi_pending{false};
+  int spi_intr_flags{-1};
+  uint32_t spi_last_flags{0U};
+  bool spi_dma_exhausted{false};
+  bool spi_dma_lost{false};
+  std::array<bool, 8> spi_queued{};
+  std::array<spi_transaction_t*, 8> spi_queued_trans{};
+  bool dma_capable{true};
+  bool internal_all{true};
+  uint32_t cache_syncs{0U};
+  int cache_last_flags{0};
+  uint32_t cycles{0U};
+  // ADC continuous
+  adc_continuous_ctx_t adc_stream{};
+  bool adc_stream_alive{false};
+  bool adc_stream_running{false};
+  adc_continuous_handle_cfg_t adc_stream_cfg{};
+  adc_continuous_config_t adc_stream_config{};
+  std::vector<adc_digi_pattern_config_t> adc_stream_pattern;
+  adc_continuous_evt_cbs_t adc_stream_cbs{};
+  void* adc_stream_user{nullptr};
+  uint32_t adc_stream_pool{0U}; // frames waiting in the SDK pool
+  uint32_t adc_stream_reads{0U};
+  std::vector<uint8_t> adc_frame_buffer;
   // UART
   std::array<fake_queue, 3> queues{};
   std::array<bool, 3> uart_installed{};
@@ -297,6 +323,83 @@ void CacheAlign(size_t bytes) {
 }
 void IramAll(bool on) {
   S().iram_all = on;
+}
+void SpiElapse(uint64_t us) {
+  for (uint64_t& left : S().spi_remaining_us) {
+    left = (left > us) ? (left - us) : 0U;
+  }
+  S().now += us;
+}
+int SpiIntrFlags() {
+  return S().spi_intr_flags;
+}
+uint32_t SpiLastFlags() {
+  return S().spi_last_flags;
+}
+void SpiDmaExhausted(bool on) {
+  S().spi_dma_exhausted = on;
+}
+void SpiDmaLost(bool on) {
+  S().spi_dma_lost = on;
+}
+void DmaCapable(bool on) {
+  S().dma_capable = on;
+}
+void InternalAll(bool on) {
+  S().internal_all = on;
+}
+uint32_t CacheSyncs() {
+  return S().cache_syncs;
+}
+int CacheLastFlags() {
+  return S().cache_last_flags;
+}
+bool AdcStreamAlive() {
+  return S().adc_stream_alive;
+}
+bool AdcStreamRunning() {
+  return S().adc_stream_running;
+}
+const adc_continuous_handle_cfg_t& AdcStreamHandleConfig() {
+  return S().adc_stream_cfg;
+}
+const adc_continuous_config_t& AdcStreamConfig() {
+  return S().adc_stream_config;
+}
+const std::vector<adc_digi_pattern_config_t>& AdcStreamPattern() {
+  return S().adc_stream_pattern;
+}
+bool AdcStreamFrame(std::span<const uint8_t> bytes) {
+  State& s = S();
+  bool woke = false;
+  if (s.adc_stream_running) {
+    // The SDK puts the frame in its pool, then calls on_conv_done, then on_pool_ovf when the pool
+    // was full (adc_continuous.c, adc_dma_intr).
+    s.adc_frame_buffer.assign(bytes.begin(), bytes.end());
+    const uint32_t capacity =
+        s.adc_stream_cfg.max_store_buf_size / s.adc_stream_cfg.conv_frame_size;
+    const bool full = s.adc_stream_pool >= capacity;
+    if (!full) {
+      ++s.adc_stream_pool;
+    }
+    if (s.adc_stream_cbs.on_conv_done != nullptr) {
+      adc_continuous_evt_data_t data{s.adc_frame_buffer.data(),
+                                     static_cast<uint32_t>(s.adc_frame_buffer.size())};
+      woke = s.adc_stream_cbs.on_conv_done(&s.adc_stream, &data, s.adc_stream_user);
+    }
+    std::fill(s.adc_frame_buffer.begin(), s.adc_frame_buffer.end(), uint8_t{0xA5U}); // reused
+    if (full && (s.adc_stream_cbs.on_pool_ovf != nullptr)) {
+      adc_continuous_evt_data_t none{};
+      woke = s.adc_stream_cbs.on_pool_ovf(&s.adc_stream, &none, s.adc_stream_user) || woke;
+    }
+  }
+  return woke;
+}
+uint32_t AdcStreamPool() {
+  return S().adc_stream_pool;
+}
+uint32_t AdcStreamReads() {
+  return S().adc_stream_reads;
 }
 uint32_t UartEventsDropped() {
   return S().uart_events_dropped;
@@ -484,6 +587,32 @@ esp_err_t esp_cache_get_alignment(uint32_t, size_t* out_alignment) {
   *out_alignment = S().cache_align;
   return ESP_OK;
 }
+bool esp_ptr_dma_capable(const void* p) {
+  return (p != nullptr) && S().dma_capable;
+}
+bool esp_ptr_internal(const void* p) {
+  return (p != nullptr) && S().internal_all;
+}
+bool esp_dma_is_buffer_alignment_satisfied(const void* ptr, size_t size, esp_dma_mem_info_t info) {
+  const size_t align = std::max(info.dma_alignment_bytes, std::max<size_t>(S().cache_align, 1U));
+  return esp_ptr_dma_capable(ptr) && ((reinterpret_cast<uintptr_t>(ptr) % align) == 0U) &&
+         ((size % align) == 0U);
+}
+esp_err_t esp_cache_msync(void* addr, size_t size, int flags) {
+  FAKE_INJECT("esp_cache_msync");
+  ++S().cache_syncs;
+  S().cache_last_flags = flags;
+  const size_t line = S().cache_align;
+  if ((addr == nullptr) || (line <= 1U) || ((reinterpret_cast<uintptr_t>(addr) % line) != 0U) ||
+      ((size % line) != 0U)) {
+    return ESP_ERR_INVALID_ARG; // no cache in front of it, or not whole lines
+  }
+  return ESP_OK;
+}
+uint32_t esp_cpu_get_cycle_count(void) {
+  S().cycles += 100U;
+  return S().cycles;
+}
 
 // --- GPIO
 // ------------------------------------------------------------------------------------------
@@ -642,11 +771,16 @@ esp_err_t i2c_master_device_change_address(i2c_master_dev_handle_t, uint16_t add
 
 // --- SPI
 // -------------------------------------------------------------------------------------------
-esp_err_t spi_bus_initialize(spi_host_device_t host, const spi_bus_config_t*, spi_dma_chan_t dma) {
+esp_err_t spi_bus_initialize(spi_host_device_t host, const spi_bus_config_t* config,
+                             spi_dma_chan_t dma) {
   FAKE_INJECT("spi_bus_initialize");
   if (S().spi_bus[static_cast<std::size_t>(host)]) {
     return ESP_ERR_INVALID_STATE;
   }
+  if ((dma != SPI_DMA_DISABLED) && S().spi_dma_exhausted) {
+    return ESP_ERR_NOT_FOUND; // "no free GDMA channel" (the C6 has three pairs)
+  }
+  S().spi_intr_flags = config->intr_flags;
   S().spi_bus[static_cast<std::size_t>(host)] = true;
   S().spi_dma = dma;
   return ESP_OK;
@@ -713,10 +847,15 @@ esp_err_t spi_device_polling_start(spi_device_handle_t handle, spi_transaction_t
   const size_t n = t->length / 8U;
   const auto* tx = static_cast<const uint8_t*>(t->tx_buffer);
   auto* rx = static_cast<uint8_t*>(t->rx_buffer);
+  S().spi_last_flags = t->flags;
   if ((rx != nullptr) && (S().spi_dma != SPI_DMA_DISABLED) && (S().cache_align > 1U) &&
       (((reinterpret_cast<uintptr_t>(rx) | n) % S().cache_align) != 0U)) {
     // setup_dma_priv_buffer: on a cached chip a receive buffer whose start or length is not a whole
-    // number of cache lines is bounced through a heap block for this transaction.
+    // number of cache lines is bounced through a heap block for this transaction, unless the
+    // transaction asked for manual alignment: then it is refused.
+    if ((t->flags & static_cast<uint32_t>(SPI_TRANS_DMA_BUFFER_ALIGN_MANUAL)) != 0U) {
+      return ESP_ERR_INVALID_ARG;
+    }
     esp_err_t nomem = ESP_OK;
     if (Injected("spi_sdk_bounce_alloc", nomem)) {
       return ESP_ERR_NO_MEM;
@@ -788,6 +927,79 @@ esp_err_t spi_device_acquire_bus(spi_device_handle_t handle, TickType_t ticks) {
 void spi_device_release_bus(spi_device_handle_t) {
   esp_err_t err = ESP_OK;
   static_cast<void>(Injected("spi_device_release_bus", err));
+}
+esp_err_t spi_device_queue_trans(spi_device_handle_t handle, spi_transaction_t* t, TickType_t) {
+  FAKE_INJECT("spi_device_queue_trans");
+  const int i = SpiIndex(handle);
+  const auto slot = static_cast<std::size_t>(i);
+  const auto host = static_cast<std::size_t>(S().spi_dev_host[slot]);
+  if ((S().spi_holder[host] >= 0) || S().spi_queued[slot]) {
+    return ESP_ERR_INVALID_STATE; // "Cannot queue new transaction while previous polling ..."
+  }
+  S().spi_last_flags = t->flags;
+  const size_t n = t->length / 8U;
+  const auto* tx = static_cast<const uint8_t*>(t->tx_buffer);
+  auto* rx = static_cast<uint8_t*>(t->rx_buffer);
+  const bool manual = (t->flags & static_cast<uint32_t>(SPI_TRANS_DMA_BUFFER_ALIGN_MANUAL)) != 0U;
+  const auto misaligned = [](const void* p, size_t align) {
+    return (align > 1U) && ((reinterpret_cast<uintptr_t>(p) % align) != 0U);
+  };
+  if (manual && (((rx != nullptr) && (misaligned(rx, 4U) || !S().dma_capable)) ||
+                 ((tx != nullptr) && !S().dma_capable))) {
+    return ESP_ERR_INVALID_ARG; // manual alignment: refused instead of a heap copy
+  }
+  const size_t offset = S().spi_sent.size();
+  for (size_t k = 0U; k < n; ++k) {
+    S().spi_sent.push_back((tx != nullptr) ? tx[k] : uint8_t{0x00U});
+    if (rx != nullptr) {
+      const size_t at = offset + k;
+      rx[k] = (at < S().spi_reply.size()) ? S().spi_reply[at] : 0x00U;
+    }
+  }
+  if (rx != nullptr) {
+    for (size_t k = n; (k % 4U) != 0U; ++k) {
+      rx[k] = 0xEEU; // the receive descriptor rounds up to whole words
+    }
+  }
+  ++S().spi_transactions;
+  S().spi_queued[slot] = true;
+  S().spi_queued_trans[slot] = t;
+  S().spi_holder[host] = i;
+  const uint64_t clock = static_cast<uint64_t>(S().spi_dev_clock[slot]);
+  S().spi_remaining_us[host] = ((uint64_t{t->length} * 1000000U) / clock + 1U) * S().spi_slow;
+  return ESP_OK;
+}
+esp_err_t spi_device_get_trans_result(spi_device_handle_t handle, spi_transaction_t** t,
+                                      TickType_t ticks) {
+  FAKE_INJECT("spi_device_get_trans_result");
+  const int i = SpiIndex(handle);
+  const auto slot = static_cast<std::size_t>(i);
+  const auto host = static_cast<std::size_t>(S().spi_dev_host[slot]);
+  const uint64_t budget = (uint64_t{ticks} * 1000000U) / configTICK_RATE_HZ;
+  if (!S().spi_queued[slot]) {
+    S().now += budget;
+    return ESP_ERR_TIMEOUT; // nothing queued: the real call waits the whole time
+  }
+  if (S().spi_stuck || (S().spi_remaining_us[host] > budget)) {
+    S().now += budget;
+    if (!S().spi_stuck) {
+      S().spi_remaining_us[host] -= budget;
+    }
+    return ESP_ERR_TIMEOUT;
+  }
+  S().now += S().spi_remaining_us[host];
+  S().spi_remaining_us[host] = 0U;
+  S().spi_holder[host] = -1;
+  S().spi_queued[slot] = false;
+  S().spi_pending = false;
+  spi_transaction_t* const done = S().spi_queued_trans[slot];
+  *t = done;
+  if (S().spi_dma_lost) {
+    S().spi_dma_lost = false;
+    done->flags |= SPI_TRANS_DMA_RX_FAIL;
+    return ESP_ERR_INVALID_STATE;
+  }
+  return ESP_OK;
 }
 
 // --- UART
@@ -1046,6 +1258,82 @@ esp_err_t twai_initiate_recovery_v2(twai_handle_t) {
   }
   S().twai_state = TWAI_STATE_RECOVERING;
   S().twai_recovery_left = S().twai_recovery_reads;
+  return ESP_OK;
+}
+
+// --- ADC continuous
+// ---------------------------------------------------------------------------------
+esp_err_t adc_continuous_new_handle(const adc_continuous_handle_cfg_t* config,
+                                    adc_continuous_handle_t* handle) {
+  FAKE_INJECT("adc_continuous_new_handle");
+  if ((config->conv_frame_size % SOC_ADC_DIGI_DATA_BYTES_PER_CONV) != 0U) {
+    return ESP_ERR_INVALID_ARG;
+  }
+  S().adc_stream_cfg = *config;
+  S().adc_stream_alive = true;
+  S().adc_stream_pool = 0U;
+  *handle = &S().adc_stream;
+  return ESP_OK;
+}
+esp_err_t adc_continuous_config(adc_continuous_handle_t, const adc_continuous_config_t* config) {
+  FAKE_INJECT("adc_continuous_config");
+  S().adc_stream_config = *config;
+  S().adc_stream_pattern.assign(config->adc_pattern, config->adc_pattern + config->pattern_num);
+  S().adc_stream_config.adc_pattern = nullptr;
+  return ESP_OK;
+}
+esp_err_t adc_continuous_register_event_callbacks(adc_continuous_handle_t,
+                                                  const adc_continuous_evt_cbs_t* cbs,
+                                                  void* user_data) {
+  FAKE_INJECT("adc_continuous_register_event_callbacks");
+  S().adc_stream_cbs = *cbs;
+  S().adc_stream_user = user_data;
+  return ESP_OK;
+}
+esp_err_t adc_continuous_start(adc_continuous_handle_t handle) {
+  FAKE_INJECT("adc_continuous_start");
+  if ((handle == nullptr) || S().adc_stream_running) {
+    return ESP_ERR_INVALID_STATE;
+  }
+  S().adc_stream_running = true;
+  return ESP_OK;
+}
+esp_err_t adc_continuous_stop(adc_continuous_handle_t handle) {
+  FAKE_INJECT("adc_continuous_stop");
+  if ((handle == nullptr) || !S().adc_stream_running) {
+    return ESP_ERR_INVALID_STATE;
+  }
+  S().adc_stream_running = false;
+  return ESP_OK;
+}
+esp_err_t adc_continuous_deinit(adc_continuous_handle_t handle) {
+  FAKE_INJECT("adc_continuous_deinit");
+  if ((handle == nullptr) || S().adc_stream_running) {
+    return ESP_ERR_INVALID_STATE;
+  }
+  S().adc_stream_alive = false;
+  S().adc_stream_cbs = adc_continuous_evt_cbs_t{};
+  return ESP_OK;
+}
+esp_err_t adc_continuous_read(adc_continuous_handle_t handle, uint8_t* buf, uint32_t length_max,
+                              uint32_t* out_length, uint32_t timeout_ms) {
+  FAKE_INJECT("adc_continuous_read");
+  ++S().adc_stream_reads;
+  if ((handle == nullptr) || !S().adc_stream_running) {
+    return ESP_ERR_INVALID_STATE;
+  }
+  if (timeout_ms != 0U) {
+    return ESP_ERR_INVALID_ARG; // the port never waits here (the fake refuses a timeout)
+  }
+  *out_length = 0U;
+  if (S().adc_stream_pool == 0U) {
+    return ESP_ERR_TIMEOUT;
+  }
+  const uint32_t frame = S().adc_stream_cfg.conv_frame_size;
+  const uint32_t n = std::min(frame, length_max);
+  std::fill(buf, buf + n, uint8_t{0U});
+  *out_length = n;
+  --S().adc_stream_pool;
   return ESP_OK;
 }
 
