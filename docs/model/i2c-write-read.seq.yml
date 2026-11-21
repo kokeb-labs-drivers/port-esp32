@@ -1,0 +1,40 @@
+---
+kind: seq
+id: i2c-write-read
+title: One I2C register read
+kicker: port-esp32
+subtitle: WriteRead through I2cController and ESP-IDF's i2c_master, with a repeated START.
+alt: >-
+  Sequence of an I2C WriteRead on the ESP32 port, in which the controller takes its lock, ESP-IDF sends the register
+  address and reads the reply after a repeated START, and the controller turns the result into a kb::Status.
+reads: >-
+  The driver's WriteRead call reaches the I2cController, which takes its lock within the call's timeout and, for a
+  new address, moves its one device handle to it without bus traffic. ESP-IDF's i2c_master sends START, the address
+  with the write bit and the register bytes to the Device, then a repeated START and the address with the read bit,
+  reads the reply and ends with STOP. The I2cController classifies the esp_err_t by the time the transfer took, runs
+  the bus recovery when SDA or SCL stays low, and returns a kb::Status to the driver.
+profile: phone
+print: portrait
+sources:
+  - src/i2c.cpp
+  - src/boundary/i2c.cpp
+  - inc/kb/port/esp32/i2c.hpp
+participants:
+  - {id: ctl, label: I2cController, tone: amber}
+  - {id: idf, label: i2c_master, tone: slate}
+  - {id: dev, label: Device, tone: green}
+steps:
+  - {note: "the driver calls WriteRead", over: [ctl, idf], tone: blue}
+  - {from: ctl, to: ctl, label: take lock}
+  - {from: ctl, to: idf, label: change_address}
+  - {note: "only for a new address, no bus traffic", over: [ctl, idf]}
+  - {from: ctl, to: idf, label: transmit_receive}
+  - {from: idf, to: dev, label: "START, addr+W, tx"}
+  - {from: dev, to: idf, label: ACK, return: true}
+  - {from: idf, to: dev, label: "Sr, addr+R"}
+  - {from: dev, to: idf, label: rx bytes, return: true}
+  - {from: idf, to: dev, label: STOP}
+  - {from: idf, to: ctl, label: esp_err_t, return: true}
+  - {from: ctl, to: ctl, label: classify by time}
+  - {note: a line held low runs RecoverBus, over: [ctl, idf]}
+  - {note: kb::Status back to the driver, over: [ctl, idf], tone: blue}

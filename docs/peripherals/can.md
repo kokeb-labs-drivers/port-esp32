@@ -14,6 +14,16 @@
 | `Recover(timeout)` | Bus-off: `twai_initiate_recovery_v2`, then status reads every millisecond until stopped (at most `timeout`), then `twai_start_v2`. Stopped: `twai_start_v2`. Running: nothing |
 | `Release()` | Under the controller lock: new calls refused, running `Send`/`Receive`/`Status` calls waited for (at most `kMaxTimeout` plus 100 ms; else `Busy` and the controller stays up), then `twai_stop_v2`, `twai_driver_uninstall_v2` |
 
+<!-- figure: can-send-receive -->
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="../diagrams/can-send-receive.dark.svg">
+  <img src="../diagrams/can-send-receive.svg"
+    alt="Sequence of a CAN Send and a Receive on the ESP32 port, in which Send returns once the TWAI driver
+    has queued the frame, the controller sends it on the bus by interrupt, and Receive takes a frame
+    another node sent.">
+</picture>
+<!-- /figure -->
+
 ## Pins and bit timing
 
 | Item | Note |

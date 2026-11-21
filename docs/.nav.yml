@@ -20,4 +20,5 @@ nav:
       - Testing and CI: testing.md
       - MISRA boundary and deviations: deviations.md
       - SOUP and kb-core: soup.md
+      - Figures: diagrams/index.md
   - Changelog: changelog.md

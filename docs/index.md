@@ -28,6 +28,18 @@ without a line of ESP-IDF in the driver.
 | TWAI | `CanBus` | `CanController` | [CAN](peripherals/can.md) |
 | esp_timer, ROM delay, esp_log | `MonotonicClock`, `BusyWait`, `LogSink` | `Clock`, `BusyWait`, `LogSink` | [Clock, delay and log](peripherals/time-log.md) |
 
+The same at a glance: native where the contract maps onto the ESP-IDF driver, adapted where the port adds its own
+logic to meet it (the I2C failure bands, a new SPI clock by adding the device again).
+
+<!-- figure: port-contracts -->
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="diagrams/port-contracts.dark.svg">
+  <img src="diagrams/port-contracts.svg"
+    alt="Matrix of the kb-core contracts the ESP32 port implements for I2C, SPI, UART, CAN, ADC, PWM, GPIO,
+    clock and log, each marked native, adapted, planned or not available.">
+</picture>
+<!-- /figure -->
+
 Every type satisfies its concepts (`static_assert` beside its definition) and converts to the contract's
 type-erased `*Ref` (`I2cBusRef`, `SpiDeviceRef`, ...), proven at compile time in `kb/port/esp32/port.hpp` and
 at run time in the host tests.
